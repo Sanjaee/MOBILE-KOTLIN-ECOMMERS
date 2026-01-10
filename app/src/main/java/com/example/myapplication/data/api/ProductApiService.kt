@@ -1,0 +1,27 @@
+package com.example.myapplication.data.api
+
+import com.example.myapplication.data.model.*
+import retrofit2.Response
+import retrofit2.http.*
+
+interface ProductApiService {
+    @GET("api/v1/products")
+    suspend fun getProducts(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10,
+        @Query("category_id") categoryId: String? = null,
+        @Query("featured") featured: String? = null,
+        @Query("active_only") activeOnly: String? = null
+    ): Response<ApiResponse<ProductListResponse>>
+    
+    @GET("api/v1/products/{id}")
+    suspend fun getProductById(@Path("id") id: String): Response<ApiResponse<Product>>
+    
+    @GET("api/v1/categories")
+    suspend fun getCategories(
+        @Query("active_only") activeOnly: String? = null
+    ): Response<ApiResponse<List<Category>>>
+    
+    @GET("api/v1/categories/{id}")
+    suspend fun getCategoryById(@Path("id") id: String): Response<ApiResponse<Category>>
+}
