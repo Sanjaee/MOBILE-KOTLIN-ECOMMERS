@@ -57,6 +57,10 @@ sealed class Screen(val route: String) {
     object PaymentStatus : Screen("payment_status/{paymentId}") {
         fun createRoute(paymentId: String) = "payment_status/$paymentId"
     }
+    
+    object OrderDetail : Screen("order_detail/{orderId}") {
+        fun createRoute(orderId: String) = "order_detail/$orderId"
+    }
 }
 
 // Slide animation helper - Gojek style
@@ -555,6 +559,36 @@ fun NavGraph(
             PaymentStatusScreen(
                 paymentId = paymentId,
                 orderId = null,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onHome = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onOrderDetail = { orderId ->
+                    // Navigate to OrderDetailScreen when payment is successful
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId)) {
+                        // Remove PaymentStatus from backstack so user goes back to home
+                        popUpTo(Screen.PaymentStatus.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.OrderDetail.route,
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType }),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            
+            OrderDetailScreen(
+                orderId = orderId,
                 onBack = {
                     navController.popBackStack()
                 },

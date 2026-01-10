@@ -46,6 +46,7 @@ fun PaymentStatusScreen(
     orderId: String? = null,
     onBack: () -> Unit,
     onHome: () -> Unit,
+    onOrderDetail: (String) -> Unit = {}, // Navigate to order detail when payment success
     paymentViewModel: PaymentViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     ),
@@ -59,13 +60,49 @@ fun PaymentStatusScreen(
     
     var countdown by remember { mutableStateOf(uiState.countdownSeconds) }
     
+    // Load payment when screen opens
     LaunchedEffect(paymentId, orderId) {
         when {
-            paymentId != null -> paymentViewModel.loadPayment(paymentId)
-            orderId != null -> {
+            !paymentId.isNullOrEmpty() -> {
+                paymentViewModel.loadPayment(paymentId!!)
+            }
+            !orderId.isNullOrEmpty() -> {
                 // Load payment by order ID if needed
+                // For now, paymentId should always be provided
             }
         }
+    }
+    
+    // Navigate to OrderDetailScreen when payment is successful
+    var hasNavigated by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(uiState.payment?.status) {
+        val paymentStatus = uiState.payment?.status
+        if (paymentStatus == com.example.myapplication.data.model.PaymentStatus.SUCCESS && !hasNavigated) {
+            paymentViewModel.stopPolling()
+            // Navigate to order detail immediately when payment is successful
+            // Use order_uuid from payment (this is the order ID in UUID format)
+            val orderId = uiState.payment?.orderUuid
+            if (!orderId.isNullOrEmpty()) {
+                hasNavigated = true
+                onOrderDetail(orderId)
+            } else {
+                // Fallback: try to get from order object if available
+                uiState.payment?.order?.id?.let { orderIdFromOrder ->
+                    if (orderIdFromOrder.isNotEmpty()) {
+                        hasNavigated = true
+                        onOrderDetail(orderIdFromOrder)
+                    }
+                }
+            }
+        } else if (paymentStatus != com.example.myapplication.data.model.PaymentStatus.PENDING) {
+            paymentViewModel.stopPolling()
+        }
+    }
+    
+    // Reset navigation flag when payment changes
+    LaunchedEffect(uiState.payment?.id) {
+        hasNavigated = false
     }
     
     LaunchedEffect(uiState.countdownSeconds) {

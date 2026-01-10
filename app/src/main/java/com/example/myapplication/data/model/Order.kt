@@ -21,9 +21,27 @@ data class Order(
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
     @SerializedName("order_items") val orderItems: List<OrderItem> = emptyList(),
-    @SerializedName("shipping_address") val shippingAddress: ShippingAddress? = null,
+    @SerializedName("shipping_address") val shippingAddress: OrderShippingAddress? = null,
     val payment: Payment? = null
 )
+
+// ShippingAddress model for Order (from API response)
+data class OrderShippingAddress(
+    val id: String,
+    @SerializedName("user_id") val userId: String,
+    val label: String,
+    @SerializedName("recipient_name") val recipientName: String,
+    val phone: String,
+    @SerializedName("address_line1") val addressLine1: String,
+    val city: String,
+    val province: String,
+    @SerializedName("postal_code") val postalCode: String,
+    @SerializedName("is_default") val isDefault: Boolean = false
+) {
+    fun getFullAddress(): String {
+        return "$addressLine1, $city, $province $postalCode"
+    }
+}
 
 data class OrderItem(
     val id: String,
