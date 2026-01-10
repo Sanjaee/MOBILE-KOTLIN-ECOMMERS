@@ -8,13 +8,27 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.screen.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object ForgotPassword : Screen("forgot_password")
     object Home : Screen("home")
+    
+    // Main screens with bottom navigation
+    object Main : Screen("main")
+    object MainHome : Screen("main/home")
+    object MainFood : Screen("main/food")
+    object MainPromo : Screen("main/promo")
+    object MainTransaksi : Screen("main/transaksi")
+    object MainAkun : Screen("main/akun")
+    
+    // Profile
+    object Profile : Screen("profile")
     
     object VerifyOTP : Screen("verify_otp/{email}") {
         fun createRoute(email: String) = "verify_otp/$email"
@@ -34,6 +48,14 @@ sealed class Screen(val route: String) {
     
     object ProductDetail : Screen("product_detail/{productId}") {
         fun createRoute(productId: String) = "product_detail/$productId"
+    }
+    
+    object Checkout : Screen("checkout/{productId}/{quantity}") {
+        fun createRoute(productId: String, quantity: Int = 1) = "checkout/$productId/$quantity"
+    }
+    
+    object PaymentStatus : Screen("payment_status/{paymentId}") {
+        fun createRoute(paymentId: String) = "payment_status/$paymentId"
     }
 }
 
@@ -60,6 +82,26 @@ private fun slideOutToRight() = slideOutHorizontally(
     animationSpec = tween(300)
 ) + fadeOut(animationSpec = tween(300))
 
+@Composable
+private fun MainScreenWrapper(
+    selectedTab: String,
+    onTabSelected: (String) -> Unit,
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit,
+    onProductClick: (String) -> Unit,
+    content: @Composable () -> Unit
+) {
+    MainScreen(
+        selectedTab = selectedTab,
+        onTabSelected = onTabSelected,
+        onLogout = onLogout,
+        onProductClick = onProductClick,
+        onProfileClick = onProfileClick
+    ) {
+        content()
+    }
+}
+
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NavGraph(
@@ -81,7 +123,7 @@ fun NavGraph(
         ) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -133,7 +175,7 @@ fun NavGraph(
             VerifyOTPScreen(
                 email = email,
                 onVerifySuccess = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
@@ -232,7 +274,7 @@ fun NavGraph(
             VerifyEmailScreen(
                 token = token,
                 onVerifySuccess = {
-                    navController.navigate(Screen.Home.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
@@ -244,22 +286,202 @@ fun NavGraph(
             )
         }
         
+        // Main screen with bottom navigation (default to Home)
         composable(
-            route = Screen.Home.route,
+            route = Screen.Main.route,
             enterTransition = { slideInFromRight() },
             exitTransition = { slideOutToLeft() },
             popEnterTransition = { slideInFromLeft() },
             popExitTransition = { slideOutToRight() }
         ) {
-            HomeScreen(
+            navController.navigate(Screen.MainHome.route) {
+                popUpTo(Screen.Main.route) { inclusive = true }
+            }
+        }
+        
+        // Main Home (with bottom nav)
+        composable(
+            route = Screen.MainHome.route,
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            MainScreenWrapper(
+                selectedTab = Screen.MainHome.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Main.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 onLogout = {
                     onLogout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
                 onProductClick = { productId ->
                     navController.navigate(Screen.ProductDetail.createRoute(productId))
+                }
+            ) {
+                HomeScreenContent(
+                    onProductClick = { productId ->
+                        navController.navigate(Screen.ProductDetail.createRoute(productId))
+                    }
+                )
+            }
+        }
+        
+        // Main Food
+        composable(
+            route = Screen.MainFood.route,
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            MainScreenWrapper(
+                selectedTab = Screen.MainFood.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Main.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onProductClick = { }
+            ) {
+                FoodScreen()
+            }
+        }
+        
+        // Main Promo
+        composable(
+            route = Screen.MainPromo.route,
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            MainScreenWrapper(
+                selectedTab = Screen.MainPromo.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Main.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onProductClick = { }
+            ) {
+                PromoScreen()
+            }
+        }
+        
+        // Main Transaksi
+        composable(
+            route = Screen.MainTransaksi.route,
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            MainScreenWrapper(
+                selectedTab = Screen.MainTransaksi.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Main.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onProductClick = { }
+            ) {
+                TransaksiScreen()
+            }
+        }
+        
+        // Main Akun
+        composable(
+            route = Screen.MainAkun.route,
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(300)) }
+        ) {
+            MainScreenWrapper(
+                selectedTab = Screen.MainAkun.route,
+                onTabSelected = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Screen.Main.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
+                },
+                onProductClick = { }
+            ) {
+                AkunScreen(
+                    onProfileClick = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onLogout = {
+                        onLogout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+        
+        // Profile Screen
+        composable(
+            route = Screen.Profile.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            ProfileScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -281,6 +503,63 @@ fun NavGraph(
                 onLogout = {
                     onLogout()
                     navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onBuyClick = { product ->
+                    navController.navigate(Screen.Checkout.createRoute(product.id, 1))
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.Checkout.route,
+            arguments = listOf(
+                navArgument("productId") { type = NavType.StringType },
+                navArgument("quantity") { type = NavType.IntType; defaultValue = 1 }
+            ),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            val quantity = backStackEntry.arguments?.getInt("quantity") ?: 1
+            
+            CheckoutPage1Screen(
+                productId = productId,
+                quantity = quantity,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onPayClick = { paymentId ->
+                    // Navigate to PaymentStatusScreen after payment is created
+                    navController.navigate(Screen.PaymentStatus.createRoute(paymentId)) {
+                        // Remove checkout from backstack so user can't go back
+                        popUpTo(Screen.Checkout.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.PaymentStatus.route,
+            arguments = listOf(navArgument("paymentId") { type = NavType.StringType }),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val paymentId = backStackEntry.arguments?.getString("paymentId") ?: ""
+            
+            PaymentStatusScreen(
+                paymentId = paymentId,
+                orderId = null,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onHome = {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }

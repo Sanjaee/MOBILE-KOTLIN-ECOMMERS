@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     // Check login state with error handling
                     try {
                         val loggedIn = repository.isLoggedIn()
-                        startDestination = if (loggedIn) Screen.Home.route else Screen.Login.route
+                        startDestination = if (loggedIn) Screen.Main.route else Screen.Login.route
                     } catch (e: Exception) {
                         // Jika ada error, default ke Login screen
                         startDestination = Screen.Login.route

@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.myapplication.R
+import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
 import com.example.myapplication.ui.viewmodel.ProductViewModel
@@ -48,6 +49,7 @@ fun ProductDetailScreen(
     productId: String,
     onBack: () -> Unit,
     onLogout: () -> Unit = {},
+    onBuyClick: ((Product) -> Unit)? = null,
     viewModel: ProductViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     )
@@ -81,7 +83,9 @@ fun ProductDetailScreen(
         bottomBar = {
             ProductDetailBottomBar(
                 onChatClick = { /* Open chat */ },
-                onCallClick = { /* Make call */ },
+                onCallClick = {
+                    product?.let { onBuyClick?.invoke(it) }
+                },
                 onAppBenefitClick = { /* Show app benefit */ }
             )
         },

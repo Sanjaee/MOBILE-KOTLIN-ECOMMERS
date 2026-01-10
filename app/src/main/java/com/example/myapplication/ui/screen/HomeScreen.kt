@@ -39,10 +39,8 @@ import com.example.myapplication.ui.viewmodel.HomeViewModel
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    onLogout: () -> Unit,
+fun HomeScreenContent(
     onProductClick: (String) -> Unit,
     homeViewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
@@ -60,144 +58,116 @@ fun HomeScreen(
         productViewModel.loadFeaturedProducts()
     }
     
-    // Handle token expired - redirect to login immediately
-    LaunchedEffect(homeUiState.isTokenExpired, productUiState.isTokenExpired) {
-        if (homeUiState.isTokenExpired || productUiState.isTokenExpired) {
-            onLogout()
-        }
-    }
-    
-    Scaffold(
-        containerColor = White
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(White)
-                .padding(paddingValues)
-        ) {
-            if (homeUiState.isTokenExpired || productUiState.isTokenExpired) {
-                // Show loading while redirecting
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(color = Black)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Redirecting to login...",
-                        color = Color(0xFF6B7280),
-                        fontSize = 16.sp
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(White)
+    ) {
+        if (productUiState.isLoading && productUiState.products.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(color = Black)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Loading products...",
+                    color = Color(0xFF6B7280),
+                    fontSize = 16.sp
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                // Search Bar & Cart Header
+                item {
+                    SearchAndCartHeader(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
-            } else if (productUiState.isLoading && productUiState.products.isEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(color = Black)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Loading products...",
-                        color = Color(0xFF6B7280),
-                        fontSize = 16.sp
+                
+                // Filter & Location Bar
+                item {
+                    FilterLocationBar(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    // Search Bar & Cart Header
+                
+                item {
+                    Divider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = Color(0xFFE5E7EB),
+                        thickness = 1.dp
+                    )
+                }
+                
+                // Featured Products Section (New Arrival)
+                if (productUiState.featuredProducts.isNotEmpty()) {
                     item {
-                        SearchAndCartHeader(
-                            onLogout = onLogout,
+                        ProductListSection(
+                            title = "New arrival di ${getCurrentMonthYear()}",
+                            products = productUiState.featuredProducts,
+                            onProductClick = { product ->
+                                onProductClick(product.id)
+                            },
+                            onSeeAllClick = {
+                                // Navigate to all featured products
+                            },
+                            isHorizontal = true
+                        )
+                    }
+                    
+                    item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
+                            color = Color(0xFFDC2626),
+                            thickness = 2.dp
+                        )
+                    }
+                }
+                
+                // All Products Section
+                if (productUiState.products.isNotEmpty()) {
+                    item {
+                        ProductListSection(
+                            title = "Semua Produk",
+                            products = productUiState.products,
+                            onProductClick = { product ->
+                                onProductClick(product.id)
+                            },
+                            isHorizontal = false
+                        )
+                    }
+                } else if (!productUiState.isLoading) {
+                    // Empty State
+                    item {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        )
-                    }
-                    
-                    // Filter & Location Bar
-                    item {
-                        FilterLocationBar(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                    
-                    item {
-                        Divider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = Color(0xFFE5E7EB),
-                            thickness = 1.dp
-                        )
-                    }
-                    
-                    // Featured Products Section (New Arrival)
-                    if (productUiState.featuredProducts.isNotEmpty()) {
-                        item {
-                            ProductListSection(
-                                title = "New arrival di ${getCurrentMonthYear()}",
-                                products = productUiState.featuredProducts,
-                                onProductClick = { product ->
-                                    onProductClick(product.id)
-                                },
-                                onSeeAllClick = {
-                                    // Navigate to all featured products
-                                },
-                                isHorizontal = true
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "No products found",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF6B7280)
                             )
-                        }
-                        
-                        item {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
-                                color = Color(0xFFDC2626),
-                                thickness = 2.dp
-                            )
-                        }
-                    }
-                    
-                    // All Products Section
-                    if (productUiState.products.isNotEmpty()) {
-                        item {
-                            ProductListSection(
-                                title = "Semua Produk",
-                                products = productUiState.products,
-                                onProductClick = { product ->
-                                    onProductClick(product.id)
-                                },
-                                isHorizontal = false
-                            )
-                        }
-                    } else if (!productUiState.isLoading) {
-                        // Empty State
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
+                            
+                            productUiState.errorMessage?.let { error ->
                                 Text(
-                                    text = "No products found",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF6B7280)
+                                    text = error,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFDC2626)
                                 )
-                                
-                                productUiState.errorMessage?.let { error ->
-                                    Text(
-                                        text = error,
-                                        fontSize = 14.sp,
-                                        color = Color(0xFFDC2626)
-                                    )
-                                }
                             }
                         }
                     }
@@ -209,7 +179,6 @@ fun HomeScreen(
 
 @Composable
 private fun SearchAndCartHeader(
-    onLogout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
