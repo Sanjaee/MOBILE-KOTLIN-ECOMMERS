@@ -13,17 +13,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,16 +56,30 @@ fun HomeScreenContent(
     val homeUiState by homeViewModel.uiState.collectAsState()
     val productUiState by productViewModel.uiState.collectAsState()
     
+    // Track refresh state separately to avoid conflicts with initial loading
+    var isRefreshing by remember { mutableStateOf(false) }
+    
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
+    
     // Load products on first render
     LaunchedEffect(Unit) {
         productViewModel.loadProducts(page = 1, limit = 10, activeOnly = true)
-        productViewModel.loadFeaturedProducts()
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(White)
+    // Handle refresh - end when loading completes
+    LaunchedEffect(productUiState.isLoading) {
+        if (isRefreshing && !productUiState.isLoading) {
+            isRefreshing = false
+        }
+    }
+    
+    SwipeRefresh(
+        state = swipeRefreshState,
+        onRefresh = {
+            isRefreshing = true
+            productViewModel.loadProducts(page = 1, limit = 10, activeOnly = true)
+        },
+        modifier = Modifier.fillMaxSize()
     ) {
         if (productUiState.isLoading && productUiState.products.isEmpty()) {
             Column(
@@ -82,55 +100,13 @@ fun HomeScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                // Search Bar & Cart Header
+                // Search Bar & Cart Header (Navbar style)
                 item {
-                    SearchAndCartHeader(
+                    HomeNavBar(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
-                }
-                
-                // Filter & Location Bar
-                item {
-                    FilterLocationBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-                
-                item {
-                    Divider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = Color(0xFFE5E7EB),
-                        thickness = 1.dp
-                    )
-                }
-                
-                // Featured Products Section (New Arrival)
-                if (productUiState.featuredProducts.isNotEmpty()) {
-                    item {
-                        ProductListSection(
-                            title = "New arrival di ${getCurrentMonthYear()}",
-                            products = productUiState.featuredProducts,
-                            onProductClick = { product ->
-                                onProductClick(product.id)
-                            },
-                            onSeeAllClick = {
-                                // Navigate to all featured products
-                            },
-                            isHorizontal = true
-                        )
-                    }
-                    
-                    item {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
-                            color = Color(0xFFDC2626),
-                            thickness = 2.dp
-                        )
-                    }
                 }
                 
                 // All Products Section
@@ -178,140 +154,110 @@ fun HomeScreenContent(
 }
 
 @Composable
-private fun SearchAndCartHeader(
-    modifier: Modifier = Modifier
+private fun HomeNavBar(
+    modifier: Modifier = Modifier,
+    onSearchClick: () -> Unit = { /* Perform search */ },
+    onCartClick: () -> Unit = { /* Navigate to cart */ },
+    cartItemCount: Int = 0
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = White, // White background
+        shadowElevation = 2.dp
     ) {
-        // Search Bar - Width auto dengan style seperti Tokopedia
-        OutlinedTextField(
-            value = "",
-            onValueChange = { },
-            modifier = Modifier
-                .weight(1f)
-                .defaultMinSize(minWidth = 200.dp),
-            placeholder = { 
-                Text(
-                    text = "Cari di Tokopedia", 
-                    color = Color(0xFF9CA3AF),
-                    fontSize = 14.sp
-                ) 
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color(0xFF9CA3AF),
-                    modifier = Modifier.size(20.dp)
-                )
-            },
-            trailingIcon = {
-                Text(
-                    text = "Cari",
-                    color = Color(0xFF6B7280),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clickable(onClick = { /* Perform search */ })
-                        .padding(end = 8.dp, start = 8.dp, top = 8.dp, bottom = 8.dp)
-                )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(8.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedBorderColor = Color(0xFFE5E7EB),
-                unfocusedBorderColor = Color(0xFFE5E7EB),
-                focusedTextColor = Color(0xFF1F2937),
-                unfocusedTextColor = Color(0xFF1F2937)
-            )
-        )
-        
-        // Right Icons: Envelope, Bell, Shopping Cart (outline style seperti di gambar)
-        IconButton(
-            onClick = { /* Navigate to messages */ },
-            modifier = Modifier.size(48.dp)
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Email,
-                contentDescription = "Messages",
-                tint = Color(0xFF6B7280),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        
-        IconButton(
-            onClick = { /* Navigate to notifications */ },
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = Color(0xFF6B7280),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        
-        IconButton(
-            onClick = { /* Navigate to cart */ },
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.ShoppingCart,
-                contentDescription = "Cart",
-                tint = Color(0xFF6B7280),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FilterLocationBar(
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Filter Button
-        OutlinedButton(
-            onClick = { /* Open filter */ },
-            modifier = Modifier.height(36.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = White,
-                contentColor = Black
-            )
-        ) {
-            Icon(
-                painter = painterResource(id = android.R.drawable.ic_menu_sort_by_size),
-                contentDescription = "Filter",
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Filter", fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        }
-        
-        // Location Chips
-        listOf("Jabodetabek", "Jakarta Barat", "Jakarta").forEach { location ->
-            FilterChip(
-                selected = location == "Jabodetabek",
-                onClick = { },
-                label = { Text(location, fontSize = 12.sp) },
-                modifier = Modifier.height(36.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFFEFF6FF),
-                    selectedLabelColor = Color(0xFF3B82F6),
-                    containerColor = Color(0xFFF9FAFB),
-                    labelColor = Color(0xFF6B7280)
-                )
-            )
+            // Search Bar (tanpa tombol back)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White)
+                    .drawBehind {
+                        drawRect(
+                            color = Color(0xFFD1D5DB),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
+                    .clickable(onClick = onSearchClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search",
+                            tint = Color(0xFF9CA3AF),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Cari di Tokopedia",
+                            fontSize = 14.sp,
+                            color = Color(0xFF9CA3AF)
+                        )
+                    }
+                    TextButton(
+                        onClick = onSearchClick,
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Black
+                        )
+                    ) {
+                        Text(
+                            text = "Cari",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            
+            // Shopping Cart with Badge
+            Box(modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onCartClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ShoppingCart,
+                        contentDescription = "Cart",
+                        tint = Black,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                if (cartItemCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 8.dp, y = (-4).dp)
+                            .size(18.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFEC4899)), // Pink-red badge color
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = cartItemCount.toString(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    }
+                }
+            }
         }
     }
 }

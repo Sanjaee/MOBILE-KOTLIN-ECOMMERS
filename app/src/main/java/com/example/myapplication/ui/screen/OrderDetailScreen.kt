@@ -22,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -283,20 +284,6 @@ fun OrderDetailContent(
             totalAmount = order.totalAmount
         )
         
-        // Section 9: Discount & Cashback Banner
-        if (order.totalDiscount > 0 || order.bonus > 0) {
-            DiscountCashbackBanner(
-                totalDiscount = order.totalDiscount,
-                cashback = order.bonus
-            )
-        }
-        
-        // Section 10: Buy Again Button
-        BuyAgainButton(
-            discountAmount = if (order.totalDiscount > 0) order.totalDiscount / order.orderItems.size else 0,
-            onBuyAgain = onBuyAgain
-        )
-        
         // Bottom spacing
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -331,6 +318,7 @@ fun OrderCompletedSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -339,11 +327,15 @@ fun OrderCompletedSection(
                             fontSize = 14.sp,
                             color = Color(0xFF6B7280)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = orderNumber,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Black
+                            color = Black,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         IconButton(
                             onClick = onCopyOrderNumber,
@@ -456,8 +448,7 @@ fun ProductDetailsSection(
                 ProductDetailItem(
                     orderItem = firstItem,
                     hasProtection = hasProtection,
-                    discountAmount = if (orderItems.size == 1) totalDiscount else 0,
-                    onBuyAgain = onBuyAgain
+                    discountAmount = if (orderItems.size == 1) totalDiscount else 0
                 )
             }
             
@@ -488,8 +479,7 @@ fun ProductDetailsSection(
 fun ProductDetailItem(
     orderItem: OrderItem,
     hasProtection: Boolean,
-    discountAmount: Int,
-    onBuyAgain: () -> Unit
+    discountAmount: Int
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -562,21 +552,6 @@ fun ProductDetailItem(
                         color = Color(0xFFBE185D)
                     )
                 }
-            }
-            
-            Button(
-                onClick = onBuyAgain,
-                modifier = Modifier.padding(top = 4.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF10B981)
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "Beli Lagi",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
             }
         }
     }
@@ -1086,57 +1061,6 @@ fun TotalShoppingSection(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Black
-            )
-        }
-    }
-}
-
-@Composable
-fun DiscountCashbackBanner(
-    totalDiscount: Int,
-    cashback: Int
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(Color(0xFFE0F2FE), RoundedCornerShape(8.dp))
-            .padding(16.dp)
-    ) {
-        // Format: "Kamu dapat diskon Rp106.000 & akan dapat cashback 41.960 di transaksi ini"
-        // Discount with bold, cashback without currency symbol (orange color)
-        val discountText = formatPriceOrderDetail(totalDiscount)
-        val cashbackText = formatCashbackDisplay(cashback)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Text(
-                text = "Kamu dapat diskon ",
-                fontSize = 13.sp,
-                color = Color(0xFF0369A1)
-            )
-            Text(
-                text = discountText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF0369A1)
-            )
-            Text(
-                text = " & akan dapat cashback ",
-                fontSize = 13.sp,
-                color = Color(0xFF0369A1)
-            )
-            Text(
-                text = cashbackText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFFF59E0B) // Orange color for cashback
-            )
-            Text(
-                text = " di transaksi ini",
-                fontSize = 13.sp,
-                color = Color(0xFF0369A1)
             )
         }
     }

@@ -72,16 +72,13 @@ fun ProfileScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Black
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = White,
-                    titleContentColor = Black
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
             )
         },
         containerColor = Color(0xFFF5F5F5)

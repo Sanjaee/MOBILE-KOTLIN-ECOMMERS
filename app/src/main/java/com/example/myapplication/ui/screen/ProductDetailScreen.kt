@@ -1,8 +1,10 @@
 package com.example.myapplication.ui.screen
 
 import android.app.Application
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,12 +26,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -72,34 +79,96 @@ fun ProductDetailScreen(
     
     Scaffold(
         topBar = {
-            ProductDetailTopBar(
-                onBack = onBack,
-                onSearchClick = { /* Navigate to search */ },
-                onShareClick = { /* Share product */ },
-                onCartClick = { /* Navigate to cart */ },
-                onMenuClick = { /* Open menu */ }
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Black
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Navigate to search */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search",
+                            tint = Black
+                        )
+                    }
+                    IconButton(onClick = { /* Share */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Send,
+                            contentDescription = "Share",
+                            tint = Black
+                        )
+                    }
+                    Box {
+                        IconButton(onClick = { /* Navigate to cart */ }) {
+                            Icon(
+                                imageVector = Icons.Outlined.ShoppingCart,
+                                contentDescription = "Cart",
+                                tint = Black
+                            )
+                        }
+                        // Cart badge
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 8.dp, y = (-4).dp)
+                                .size(18.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFFDC2626)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "1",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
+                        }
+                    }
+                    IconButton(onClick = { /* Menu */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "Menu",
+                            tint = Black
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
             )
         },
         bottomBar = {
             ProductDetailBottomBar(
                 onChatClick = { /* Open chat */ },
-                onCallClick = {
+                onBuyDirectClick = {
                     product?.let { onBuyClick?.invoke(it) }
                 },
-                onAppBenefitClick = { /* Show app benefit */ }
+                onAddToCartClick = { /* Add to cart */ }
             )
         },
         containerColor = White
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            if (uiState.isLoadingDetail && product == null) {
-                // Loading State
+        if (uiState.isLoadingDetail && product == null) {
+            // Loading State
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -111,10 +180,16 @@ fun ProductDetailScreen(
                         fontSize = 16.sp
                     )
                 }
-            } else if (uiState.errorMessage != null && product == null) {
-                // Error State
+            }
+        } else if (uiState.errorMessage != null && product == null) {
+            // Error State
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -137,15 +212,26 @@ fun ProductDetailScreen(
                         Text("Retry")
                     }
                 }
-            } else if (product != null) {
-                // Content
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // Product Image Section
-                    Box(
+            }
+        } else if (product != null) {
+            // Calculate discount
+            val discountPercent = 5 // 5% discount as per image
+            val originalPrice = (product.price * 1.056).toInt() // ~5.6% higher to get 5% discount
+            val rating = 4.9f
+            val reviewCount = 628
+            val photoReviewCount = 74
+            val soldCount = 5000
+            
+            // Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .background(Color.White)
+            ) {
+                // Pure Product Image (No overlay, no badge)
+                Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
@@ -158,195 +244,306 @@ fun ProductDetailScreen(
                                 .build(),
                             contentDescription = product.name,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             placeholder = painterResource(id = R.drawable.logo),
                             error = painterResource(id = R.drawable.logo)
                         )
                     }
                     
-                    // Warranty Text
-                    Text(
-                        text = "Garansi Resmi Indonesia",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Black,
+                // Price and Discount Section
+                Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp)
-                    )
-                    
-                    // Price Section
-                    Text(
-                        text = formatPrice(product.price),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Black,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    
-                    // Discount/Bonus Information
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.LocalOffer,
-                            contentDescription = "Discount",
-                            tint = Color(0xFFF59E0B),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Lebih hemat s.d. 1% pakai bonus di checkout",
-                            fontSize = 13.sp,
-                            color = Color(0xFF6B7280)
-                        )
-                    }
-                    
-                    Divider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = Color(0xFFE5E7EB),
-                        thickness = 1.dp
-                    )
-                    
-                    // Product Title with Heart Icon
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = product.name,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Black,
-                            modifier = Modifier.weight(1f),
-                            lineHeight = 22.sp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        IconButton(
-                            onClick = { isFavorite = !isFavorite },
-                            modifier = Modifier.size(48.dp)
+                        // Price Row: Current Price (Large, Black, Bold) and Original Price with Discount
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (isFavorite) Color(0xFFDC2626) else Color(0xFF6B7280),
-                                modifier = Modifier.size(24.dp)
+                            // Current Price (Large, Bold, Black)
+                            Text(
+                                text = formatPriceDetail(product.price),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Black
+                            )
+                            
+                            // Original Price with Discount Percentage
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = formatPriceDetail(originalPrice),
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF9CA3AF),
+                                    textDecoration = TextDecoration.LineThrough
+                                )
+                                Text(
+                                    text = "$discountPercent%",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFDC2626)
+                                )
+                            }
+                        }
+                        
+                        // Discount Badge (Pink) - "Diskon Terpakai 100"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFFFCE7F3))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Diskon Terpakai 100",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFBE185D)
                             )
                         }
-                    }
-                    
-                    // Rating and Reviews Section
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Rating
+                        
+                        // Bonus Cashback Row with Icon and Chevron
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { /* Navigate to bonus info */ },
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocalOffer,
+                                    contentDescription = "Bonus",
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Lebih hemat s.d. 10% pakai bonus di checkout",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = Color(0xFF6B7280),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        // Bonus Cashback Badge (Yellow)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFFFFF8E1))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Bonus Cashback",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF59E0B)
+                            )
+                        }
+                        
+                        // Product Title with Heart Icon
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = product.name,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Black,
+                                modifier = Modifier.weight(1f),
+                                lineHeight = 22.sp
+                            )
+                            IconButton(
+                                onClick = { isFavorite = !isFavorite },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = "Favorite",
+                                    tint = if (isFavorite) Color(0xFFDC2626) else Color(0xFF6B7280),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        
+                        // Rating and Reviews Section
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Star Rating
                             Text(
                                 text = "★",
                                 fontSize = 16.sp,
                                 color = Color(0xFFF59E0B)
                             )
                             Text(
-                                text = "5.0 (107)",
-                                fontSize = 13.sp,
+                                text = "$rating",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
+                                color = Color(0xFF6B7280)
+                            )
+                            
+                            // Review Count (Blue, Underlined, Clickable)
+                            Text(
+                                text = "($reviewCount)",
+                                fontSize = 14.sp,
+                                color = Color(0xFF3B82F6),
+                                modifier = Modifier.clickable { /* Navigate to reviews */ },
+                                style = TextStyle(
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            )
+                            
+                            Text(
+                                text = "•",
+                                fontSize = 14.sp,
+                                color = Color(0xFFD1D5DB)
+                            )
+                            
+                            // Photo Reviews (Blue, Underlined, Clickable)
+                            Text(
+                                text = "$photoReviewCount Foto ulasan",
+                                fontSize = 14.sp,
+                                color = Color(0xFF3B82F6),
+                                modifier = Modifier.clickable { /* Navigate to photo reviews */ },
+                                style = TextStyle(
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            )
+                            
+                            Text(
+                                text = "•",
+                                fontSize = 14.sp,
+                                color = Color(0xFFD1D5DB)
+                            )
+                            
+                            // Sold Count
+                            Text(
+                                text = formatSoldCountDetail(soldCount),
+                                fontSize = 14.sp,
                                 color = Color(0xFF6B7280)
                             )
                         }
                         
-                        Text(
-                            text = "•",
-                            fontSize = 13.sp,
-                            color = Color(0xFFD1D5DB)
-                        )
-                        
-                        Text(
-                            text = "70 Foto ulasan",
-                            fontSize = 13.sp,
-                            color = Color(0xFF6B7280)
-                        )
-                        
-                        Text(
-                            text = "•",
-                            fontSize = 13.sp,
-                            color = Color(0xFFD1D5DB)
-                        )
-                        
-                        Text(
-                            text = "250+ Terjual",
-                            fontSize = 13.sp,
-                            color = Color(0xFF6B7280)
-                        )
-                    }
-                    
-                    Divider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                        color = Color(0xFFE5E7EB),
-                        thickness = 1.dp
-                    )
-                    
-                    // Product Description
-                    if (!product.description.isNullOrBlank()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Deskripsi Produk",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Black,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = product.description ?: "",
-                                fontSize = 14.sp,
-                                color = Color(0xFF6B7280),
-                                lineHeight = 20.sp
-                            )
-                        }
-                    }
-                    
-                    // Category Info
-                    product.category?.let { category ->
+                        // Shipping Information Row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .clickable { /* Navigate to shipping details */ },
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "Kategori:",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF6B7280)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocalShipping,
+                                    contentDescription = "Shipping",
+                                    tint = Color(0xFF6B7280),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Ongkir mulai Rp8.000",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                    Text(
+                                        text = "Est. tiba besok - 15 Jan",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = Color(0xFF6B7280),
+                                modifier = Modifier.size(20.dp)
                             )
-                            Text(
-                                text = category.name,
-                                fontSize = 14.sp,
-                                color = Black
+                        }
+                        
+                        // Return Policy Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { /* Navigate to return policy */ },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CheckCircle,
+                                    contentDescription = "Return Policy",
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Mudah dikembalikan • Pasti Ori • Pengembalian 6 hari",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = Color(0xFF6B7280),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                     
-                    // Stock Info
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = Color(0xFFE5E7EB),
+                    thickness = 1.dp
+                )
+                
+                // Product Description
+                if (!product.description.isNullOrBlank()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Deskripsi Produk",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Text(
+                            text = product.description ?: "",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6B7280),
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+                
+                // Category Info
+                product.category?.let { category ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -355,47 +552,70 @@ fun ProductDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Stok:",
+                            text = "Kategori:",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF6B7280)
                         )
                         Text(
-                            text = if (product.stock > 0) "${product.stock} tersedia" else "Stok habis",
+                            text = category.name,
                             fontSize = 14.sp,
-                            color = if (product.stock > 0) Color(0xFF10B981) else Color(0xFFDC2626)
+                            color = Black
                         )
                     }
-                    
-                    // Bottom spacing for bottom bar
-                    Spacer(modifier = Modifier.height(100.dp))
                 }
+                
+                // Stock Info
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Stok:",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF6B7280)
+                    )
+                    Text(
+                        text = if (product.stock > 0) "${product.stock} tersedia" else "Stok habis",
+                        fontSize = 14.sp,
+                        color = if (product.stock > 0) Color(0xFF10B981) else Color(0xFFDC2626)
+                    )
+                }
+                
+                // Bottom spacing for bottom bar
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
 }
 
 @Composable
-private fun ProductDetailTopBar(
+fun ProductDetailNavBar(
     onBack: () -> Unit,
     onSearchClick: () -> Unit,
-    onShareClick: () -> Unit,
     onCartClick: () -> Unit,
-    onMenuClick: () -> Unit
+    cartItemCount: Int = 0
 ) {
     Surface(
-        color = White,
+        color = Color(0xFFFFF8E1), // Light yellow/beige background like in image
         shadowElevation = 2.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Back Button
-            IconButton(onClick = onBack) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -404,76 +624,91 @@ private fun ProductDetailTopBar(
                 )
             }
             
-            // Logo "Universe Your Gadget Store"
-            Column(
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.weight(1f)
+            // Search Bar
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White)
+                    .drawBehind {
+                        drawRect(
+                            color = Color(0xFFD1D5DB),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
+                    .clickable(onClick = onSearchClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
                 Row(
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Universe",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Black,
-                        letterSpacing = 0.3.sp
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFDC2626))
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Search",
+                            tint = Color(0xFF9CA3AF),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Cari di Tokopedia",
+                            fontSize = 14.sp,
+                            color = Color(0xFF9CA3AF)
+                        )
+                    }
+                    TextButton(
+                        onClick = onSearchClick,
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Black
+                        )
+                    ) {
+                        Text(
+                            text = "Cari",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-                Text(
-                    text = "Your Gadget Store",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color(0xFF6B7280),
-                    letterSpacing = 0.2.sp,
-                    modifier = Modifier.padding(start = 8.dp, top = 2.dp)
-                )
             }
             
-            // Right Icons
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconButton(onClick = onSearchClick, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        tint = Color(0xFF6B7280),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                IconButton(onClick = onShareClick, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Share,
-                        contentDescription = "Share",
-                        tint = Color(0xFF6B7280),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                IconButton(onClick = onCartClick, modifier = Modifier.size(40.dp)) {
+            // Shopping Cart with Badge
+            Box(modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onCartClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.ShoppingCart,
                         contentDescription = "Cart",
-                        tint = Color(0xFF6B7280),
-                        modifier = Modifier.size(20.dp)
+                        tint = Black,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                IconButton(onClick = onMenuClick, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Menu,
-                        contentDescription = "Menu",
-                        tint = Color(0xFF6B7280),
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (cartItemCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 8.dp, y = (-4).dp)
+                            .size(18.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFFEC4899)), // Pink-red badge color
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = cartItemCount.toString(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    }
                 }
             }
         }
@@ -481,10 +716,10 @@ private fun ProductDetailTopBar(
 }
 
 @Composable
-private fun ProductDetailBottomBar(
+fun ProductDetailBottomBar(
     onChatClick: () -> Unit,
-    onCallClick: () -> Unit,
-    onAppBenefitClick: () -> Unit
+    onBuyDirectClick: () -> Unit,
+    onAddToCartClick: () -> Unit
 ) {
     Surface(
         color = White,
@@ -497,61 +732,96 @@ private fun ProductDetailBottomBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Chat Icon
-            IconButton(
+            // Chat Icon Button (Outline dengan border)
+            OutlinedButton(
                 onClick = onChatClick,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(0.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = Color(0xFFD1D5DB)
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = White
+                )
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Chat,
                     contentDescription = "Chat",
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.size(28.dp)
+                    tint = Color(0xFF6B7280),
+                    modifier = Modifier.size(24.dp)
                 )
             }
             
-            // Bell Langsung Button
+            // "Beli Langsung" Button (Outline Green)
+            OutlinedButton(
+                onClick = onBuyDirectClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFF10B981)), // Green border
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFF10B981) // Green text
+                )
+            ) {
+                Text(
+                    text = "Beli Langsung",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // "+ Keranjang" Button (Full Green Background)
             Button(
-                onClick = onCallClick,
+                onClick = onAddToCartClick,
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF10B981)
+                    containerColor = Color(0xFF10B981), // Green background
+                    contentColor = White // White text
                 )
             ) {
                 Text(
-                    text = "Bell Langsung",
+                    text = "+ Keranjang",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White
-                )
-            }
-            
-            // Untung pakai App Button
-            Button(
-                onClick = onAppBenefitClick,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF10B981)
-                )
-            ) {
-                Text(
-                    text = "Untung pakai App",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = White
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
     }
 }
 
-private fun formatPrice(price: Int): String {
+private fun formatPriceDetail(price: Int): String {
+    @Suppress("DEPRECATION")
     val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
     return formatter.format(price)
+}
+
+private fun formatSoldCountDetail(soldCount: Int): String {
+    return when {
+        soldCount >= 1000000 -> {
+            val juta = soldCount / 1000000
+            val sisaJuta = (soldCount % 1000000) / 100000
+            if (sisaJuta > 0) "${juta},${sisaJuta}jt+ terjual" else "${juta}jt+ terjual"
+        }
+        soldCount >= 100000 -> {
+            val ratusRb = soldCount / 100000
+            "${ratusRb}00rb+ terjual"
+        }
+        soldCount >= 10000 -> {
+            val puluhRb = soldCount / 10000
+            "${puluhRb}0rb+ terjual"
+        }
+        soldCount >= 1000 -> {
+            val ribu = soldCount / 1000
+            "${ribu} rb+ terjual" // Format: "5 rb+ terjual"
+        }
+        else -> {
+            "1 rb+ terjual"
+        }
+    }
 }

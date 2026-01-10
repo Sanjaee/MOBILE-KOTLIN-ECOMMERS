@@ -120,6 +120,9 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
+    // Pull to Refresh
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
