@@ -2,6 +2,7 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -42,6 +43,7 @@ import java.text.DecimalFormat
 fun StoreDetailScreen(
     sellerId: String? = null, // If null, load current user's store
     onBack: () -> Unit,
+    onAddProductClick: () -> Unit = {},
     viewModel: SellerViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application)
     )
@@ -452,6 +454,41 @@ fun StoreDetailScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                
+                // Add Product Button (only show for store owner)
+                if (sellerId == null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .clickable(onClick = onAddProductClick),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = "Add Product",
+                                modifier = Modifier.size(24.dp),
+                                tint = White
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Tambah Produk",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
                         }
                     }
                 }

@@ -108,3 +108,35 @@ data class ProductListResponse(
     @SerializedName("limit")
     val limit: Int
 )
+
+data class CreateProductRequest(
+    @SerializedName("category_id")
+    val categoryId: String,
+    
+    @SerializedName("name")
+    val name: String,
+    
+    @SerializedName("description")
+    val description: String? = null,
+    
+    @SerializedName("sku")
+    val sku: String,
+    
+    @SerializedName("price")
+    val price: Int,
+    
+    @SerializedName("stock")
+    val stock: Int,
+    
+    @SerializedName("weight")
+    val weight: Int? = null,
+    
+    @SerializedName("thumbnail")
+    val thumbnail: String? = null,
+    
+    @SerializedName("is_active")
+    val isActive: Boolean? = null,
+    
+    @SerializedName("is_featured")
+    val isFeatured: Boolean? = null
+)

@@ -70,6 +70,8 @@ sealed class Screen(val route: String) {
     }
     
     object MyStoreDetail : Screen("my_store_detail")
+    
+    object CreateProduct : Screen("create_product")
 }
 
 // Slide animation helper - Gojek style
@@ -509,6 +511,9 @@ fun NavGraph(
                 },
                 onCreateStoreClick = {
                     navController.navigate(Screen.CreateStore.route)
+                },
+                onNavigateToStore = {
+                    navController.navigate(Screen.MyStoreDetail.route)
                 }
             )
         }
@@ -662,6 +667,9 @@ fun NavGraph(
                 sellerId = sellerId,
                 onBack = {
                     navController.popBackStack()
+                },
+                onAddProductClick = {
+                    navController.navigate(Screen.CreateProduct.route)
                 }
             )
         }
@@ -676,6 +684,27 @@ fun NavGraph(
             StoreDetailScreen(
                 sellerId = null, // Load current user's store
                 onBack = {
+                    navController.popBackStack()
+                },
+                onAddProductClick = {
+                    navController.navigate(Screen.CreateProduct.route)
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.CreateProduct.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            CreateProductScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onProductCreated = { productId ->
+                    // Navigate back to store detail after product created
                     navController.popBackStack()
                 }
             )

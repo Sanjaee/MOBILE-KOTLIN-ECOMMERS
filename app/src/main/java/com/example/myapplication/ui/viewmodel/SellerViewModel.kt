@@ -16,7 +16,9 @@ data class SellerUiState(
     val seller: Seller? = null,
     val errorMessage: String? = null,
     val isCreateSuccess: Boolean = false,
-    val createdSellerId: String? = null
+    val createdSellerId: String? = null,
+    val hasStore: Boolean = false,
+    val isCheckingStore: Boolean = false
 )
 
 class SellerViewModel(application: Application) : AndroidViewModel(application) {
@@ -105,6 +107,37 @@ class SellerViewModel(application: Application) : AndroidViewModel(application) 
             isCreateSuccess = false,
             createdSellerId = null
         )
+    }
+    
+    fun checkHasStore() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCheckingStore = true,
+                errorMessage = null
+            )
+            
+            sellerRepository.getMySeller().fold(
+                onSuccess = { seller ->
+                    _uiState.value = _uiState.value.copy(
+                        isCheckingStore = false,
+                        hasStore = true,
+                        seller = seller
+                    )
+                },
+                onFailure = { exception ->
+                    // If 404 or "belum memiliki toko", user doesn't have a store yet
+                    val message = exception.message ?: ""
+                    val hasStore = !message.contains("404") && 
+                                  !message.contains("belum memiliki toko") &&
+                                  !message.contains("Seller not found")
+                    _uiState.value = _uiState.value.copy(
+                        isCheckingStore = false,
+                        hasStore = hasStore,
+                        errorMessage = if (hasStore) exception.message else null
+                    )
+                }
+            )
+        }
     }
     
     fun clearError() {

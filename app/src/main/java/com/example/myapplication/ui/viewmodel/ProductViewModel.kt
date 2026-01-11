@@ -20,11 +20,14 @@ data class ProductUiState(
     val currentPage: Int = 1,
     val hasMore: Boolean = true,
     val errorMessage: String? = null,
-    val isTokenExpired: Boolean = false
+    val isTokenExpired: Boolean = false,
+    val isCreateSuccess: Boolean = false,
+    val createdProductId: String? = null,
+    val categories: List<Category> = emptyList()
 )
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = ProductRepository()
+    private val repository = ProductRepository(application)
     
     private val _uiState = MutableStateFlow(ProductUiState())
     val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
@@ -153,6 +156,58 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                         isLoadingDetail = false,
                         errorMessage = exception.message ?: "Failed to load product",
                         isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
+    fun createProduct(request: CreateProductRequest) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                isCreateSuccess = false
+            )
+            
+            repository.createProduct(request).fold(
+                onSuccess = { product ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isCreateSuccess = true,
+                        createdProductId = product.id
+                    )
+                },
+                onFailure = { exception ->
+                    val isTokenExpired = exception is TokenExpiredException
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Failed to create product",
+                        isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
+    fun resetCreateSuccess() {
+        _uiState.value = _uiState.value.copy(
+            isCreateSuccess = false,
+            createdProductId = null
+        )
+    }
+    
+    fun loadCategories(activeOnly: Boolean? = null) {
+        viewModelScope.launch {
+            repository.getCategories(activeOnly = activeOnly).fold(
+                onSuccess = { categories ->
+                    _uiState.value = _uiState.value.copy(
+                        categories = categories
+                    )
+                },
+                onFailure = { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = exception.message ?: "Failed to load categories"
                     )
                 }
             )

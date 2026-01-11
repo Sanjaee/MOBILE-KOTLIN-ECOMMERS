@@ -46,9 +46,17 @@ fun CreateStoreScreen(
     
     val uiState by viewModel.uiState.collectAsState()
     
-    // Load user email from session
+    // Check if user already has a store
     LaunchedEffect(Unit) {
+        viewModel.checkHasStore()
         userEmail = preferencesManager.userEmail.first()
+    }
+    
+    // Navigate to store detail if user already has a store
+    LaunchedEffect(uiState.hasStore, uiState.seller) {
+        if (uiState.hasStore && uiState.seller != null && !uiState.isCheckingStore) {
+            onStoreCreated(uiState.seller!!.id) // Navigate to store detail
+        }
     }
     
     // Generate domain preview from shop name
@@ -96,13 +104,24 @@ fun CreateStoreScreen(
         },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-                .padding(paddingValues)
-        ) {
-            Column(
+        // Show loading while checking if user has store
+        if (uiState.isCheckingStore) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF10B981))
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF5F5F5))
+                    .padding(paddingValues)
+            ) {
+                Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
@@ -342,6 +361,7 @@ fun CreateStoreScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
+            }
             }
         }
     }

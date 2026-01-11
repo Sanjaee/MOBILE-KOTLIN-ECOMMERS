@@ -24,4 +24,10 @@ interface ProductApiService {
     
     @GET("api/v1/categories/{id}")
     suspend fun getCategoryById(@Path("id") id: String): Response<ApiResponse<Category>>
+    
+    @POST("api/v1/products")
+    suspend fun createProduct(
+        @Header("Authorization") token: String,
+        @Body request: CreateProductRequest
+    ): Response<ApiResponse<Product>>
 }

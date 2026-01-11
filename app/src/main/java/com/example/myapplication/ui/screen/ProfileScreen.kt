@@ -164,35 +164,43 @@ fun ProfileScreen(
                     }
                 }
                 
-                // Create Store Button
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable(onClick = onCreateStoreClick),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
-                ) {
-                    Row(
+                // Store Button (Create Store or View Store)
+                if (!sellerUiState.isCheckingStore) {
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                            .padding(horizontal = 16.dp)
+                            .clickable(onClick = {
+                                if (sellerUiState.hasStore) {
+                                    onNavigateToStore()
+                                } else {
+                                    onCreateStoreClick()
+                                }
+                            }),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Store,
-                            contentDescription = "Create Store",
-                            modifier = Modifier.size(24.dp),
-                            tint = White
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Buat Toko",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = White
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Store,
+                                contentDescription = if (sellerUiState.hasStore) "View Store" else "Create Store",
+                                modifier = Modifier.size(24.dp),
+                                tint = White
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = if (sellerUiState.hasStore) "Lihat Toko Saya" else "Buat Toko",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = White
+                            )
+                        }
                     }
                 }
                 
