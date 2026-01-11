@@ -62,6 +62,14 @@ sealed class Screen(val route: String) {
     object OrderDetail : Screen("order_detail/{orderId}") {
         fun createRoute(orderId: String) = "order_detail/$orderId"
     }
+    
+    object CreateStore : Screen("create_store")
+    
+    object StoreDetail : Screen("store_detail/{sellerId}") {
+        fun createRoute(sellerId: String) = "store_detail/$sellerId"
+    }
+    
+    object MyStoreDetail : Screen("my_store_detail")
 }
 
 // Slide animation helper - Gojek style
@@ -498,6 +506,9 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onCreateStoreClick = {
+                    navController.navigate(Screen.CreateStore.route)
                 }
             )
         }
@@ -614,6 +625,58 @@ fun NavGraph(
                     navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.CreateStore.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            CreateStoreScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onStoreCreated = { sellerId ->
+                    navController.navigate(Screen.StoreDetail.createRoute(sellerId)) {
+                        popUpTo(Screen.CreateStore.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.StoreDetail.route,
+            arguments = listOf(navArgument("sellerId") { type = NavType.StringType }),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val sellerId = backStackEntry.arguments?.getString("sellerId") ?: ""
+            
+            StoreDetailScreen(
+                sellerId = sellerId,
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.MyStoreDetail.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            StoreDetailScreen(
+                sellerId = null, // Load current user's store
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }

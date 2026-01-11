@@ -41,6 +41,7 @@ import com.example.myapplication.ui.viewmodel.ViewModelFactory
 fun ProfileScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onCreateStoreClick: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     )
@@ -162,6 +163,40 @@ fun ProfileScreen(
                         )
                     }
                 }
+                
+                // Create Store Button
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clickable(onClick = onCreateStoreClick),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Store,
+                            contentDescription = "Create Store",
+                            modifier = Modifier.size(24.dp),
+                            tint = White
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Buat Toko",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 // Menu Items
                 Column(

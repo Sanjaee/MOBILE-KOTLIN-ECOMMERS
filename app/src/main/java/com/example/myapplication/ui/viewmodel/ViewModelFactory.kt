@@ -40,6 +40,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             modelClass.isAssignableFrom(OrderViewModel::class.java) -> {
                 OrderViewModel(application) as T
             }
+            modelClass.isAssignableFrom(SellerViewModel::class.java) -> {
+                SellerViewModel(application) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }

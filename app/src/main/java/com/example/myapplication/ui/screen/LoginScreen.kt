@@ -132,7 +132,7 @@ fun LoginScreen(
                 
                 // Title
                 Text(
-                    text = "Zacommerce Back",
+                    text = "Zacommerce",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Black,
