@@ -21,6 +21,43 @@ keystore.properties
 release.keystore
 **/release.keystore
 
-# Google Services (mungkin berisi sensitive data)
-# Uncomment jika ingin mengabaikan google-services.json
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild
+.cxx
+
+# Google Services (berisi sensitive data untuk production)
+# Uncomment baris di bawah jika menggunakan production credentials
 # app/google-services.json
+
+# Freeline
+freeline.py
+freeline/
+freeline_project_description.json
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+fastlane/readme.md
+
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# Android Profiling
+*.hprof
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
