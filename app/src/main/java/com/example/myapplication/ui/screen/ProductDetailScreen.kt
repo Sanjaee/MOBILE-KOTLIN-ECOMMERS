@@ -7,7 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -231,25 +235,111 @@ fun ProductDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .background(Color.White)
             ) {
-                // Pure Product Image (No overlay, no badge)
-                Box(
+                // Product Images Carousel (Swipeable)
+                val images = product.images?.map { it.imageUrl } ?: emptyList()
+                val imageUrls = if (images.isNotEmpty()) {
+                    images
+                } else {
+                    product.thumbnail?.let { listOf(it) } ?: emptyList()
+                }
+                
+                if (imageUrls.isNotEmpty()) {
+                    val pagerState = rememberPagerState(
+                        initialPage = 0,
+                        pageCount = { imageUrls.size }
+                    )
+                    
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
                             .background(Color.White)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(ApiClient.getImageUrl(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = product.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit,
-                            placeholder = painterResource(id = R.drawable.logo),
-                            error = painterResource(id = R.drawable.logo)
-                        )
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(ApiClient.getImageUrl(imageUrls[page]))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "${product.name} - Image ${page + 1}",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit,
+                                placeholder = painterResource(id = R.drawable.logo),
+                                error = painterResource(id = R.drawable.logo)
+                            )
+                        }
+                        
+                        // Page Indicator (Dots) - Only show if more than 1 image
+                        if (imageUrls.size > 1) {
+                            val currentPage by remember { derivedStateOf { pagerState.currentPage } }
+                            
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                repeat(imageUrls.size) { iteration ->
+                                    val isSelected = currentPage == iteration
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (isSelected) 8.dp else 6.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) Color.White else Color.White.copy(alpha = 0.5f)
+                                            )
+                                    )
+                                }
+                            }
+                            
+                            // Image Counter (e.g., "1 / 5")
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(16.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "${currentPage + 1} / ${imageUrls.size}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = White
+                                )
+                            }
+                        }
                     }
+                } else {
+                    // Fallback: Show placeholder if no images
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp)
+                            .background(Color(0xFFF3F4F6)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Image,
+                                contentDescription = "No Image",
+                                tint = Color(0xFF9CA3AF),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                text = "Tidak ada gambar",
+                                fontSize = 14.sp,
+                                color = Color(0xFF6B7280)
+                            )
+                        }
+                    }
+                }
                     
                 // Price and Discount Section
                 Column(

@@ -1,6 +1,7 @@
 package com.example.myapplication.data.api
 
 import com.example.myapplication.data.model.*
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -30,4 +31,12 @@ interface ProductApiService {
         @Header("Authorization") token: String,
         @Body request: CreateProductRequest
     ): Response<ApiResponse<Product>>
+    
+    @Multipart
+    @POST("api/v1/products/{id}/images/upload")
+    suspend fun uploadProductImages(
+        @Header("Authorization") token: String,
+        @Path("id") productId: String,
+        @Part images: List<MultipartBody.Part>
+    ): Response<ApiResponse<UploadImagesResponse>>
 }

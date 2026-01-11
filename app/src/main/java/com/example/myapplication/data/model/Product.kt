@@ -140,3 +140,11 @@ data class CreateProductRequest(
     @SerializedName("is_featured")
     val isFeatured: Boolean? = null
 )
+
+data class UploadImagesResponse(
+    @SerializedName("images")
+    val images: List<String>,
+    
+    @SerializedName("count")
+    val count: Int
+)

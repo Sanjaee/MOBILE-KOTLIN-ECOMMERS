@@ -23,7 +23,9 @@ data class ProductUiState(
     val isTokenExpired: Boolean = false,
     val isCreateSuccess: Boolean = false,
     val createdProductId: String? = null,
-    val categories: List<Category> = emptyList()
+    val categories: List<Category> = emptyList(),
+    val isUploadingImages: Boolean = false,
+    val uploadImagesSuccess: Boolean = false
 )
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
@@ -216,5 +218,38 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+    
+    fun uploadProductImages(productId: String, imageUris: List<android.net.Uri>) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isUploadingImages = true,
+                errorMessage = null,
+                uploadImagesSuccess = false
+            )
+            
+            repository.uploadProductImages(productId, imageUris).fold(
+                onSuccess = { response ->
+                    _uiState.value = _uiState.value.copy(
+                        isUploadingImages = false,
+                        uploadImagesSuccess = true
+                    )
+                },
+                onFailure = { exception ->
+                    val isTokenExpired = exception is TokenExpiredException
+                    _uiState.value = _uiState.value.copy(
+                        isUploadingImages = false,
+                        errorMessage = exception.message ?: "Failed to upload images",
+                        isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
+    fun resetUploadImagesSuccess() {
+        _uiState.value = _uiState.value.copy(
+            uploadImagesSuccess = false
+        )
     }
 }

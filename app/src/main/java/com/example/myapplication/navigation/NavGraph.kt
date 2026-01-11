@@ -703,9 +703,11 @@ fun NavGraph(
                 onBack = {
                     navController.popBackStack()
                 },
-                onProductCreated = { productId ->
-                    // Navigate back to store detail after product created
-                    navController.popBackStack()
+                onProductCreated = { _ ->
+                    // Navigate to home after product created successfully
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }

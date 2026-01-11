@@ -1,31 +1,46 @@
 package com.example.myapplication.ui.screen
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.myapplication.data.model.CreateProductRequest
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,13 +57,21 @@ fun CreateProductScreen(
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
-    var thumbnailUrl by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var selectedCategoryName by remember { mutableStateOf<String?>(null) }
     var isActive by remember { mutableStateOf(true) }
     var isFeatured by remember { mutableStateOf(false) }
     var showCategoryDropdown by remember { mutableStateOf(false) }
+    var selectedImages by remember { mutableStateOf<List<Uri>>(emptyList()) }
     
+    // Error states for form validation
+    var categoryError by remember { mutableStateOf(false) }
+    var productNameError by remember { mutableStateOf(false) }
+    var skuError by remember { mutableStateOf(false) }
+    var priceError by remember { mutableStateOf(false) }
+    var stockError by remember { mutableStateOf(false) }
+    
+    val scrollState = rememberScrollState()
     val uiState by productViewModel.uiState.collectAsState()
     
     // Load categories on first render
@@ -56,11 +79,36 @@ fun CreateProductScreen(
         productViewModel.loadCategories(activeOnly = true)
     }
     
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.size + selectedImages.size <= 20) {
+            selectedImages = selectedImages + uris
+        }
+    }
+    
     // Navigate when product is created successfully
     LaunchedEffect(uiState.isCreateSuccess, uiState.createdProductId) {
         if (uiState.isCreateSuccess && uiState.createdProductId != null) {
-            onProductCreated(uiState.createdProductId!!)
+            val productId = uiState.createdProductId!!
+            
+            // Upload images if any selected
+            if (selectedImages.isNotEmpty()) {
+                productViewModel.uploadProductImages(productId, selectedImages)
+            } else {
+                onProductCreated(productId)
+                productViewModel.resetCreateSuccess()
+            }
+        }
+    }
+    
+    // Handle image upload success - navigate to home
+    LaunchedEffect(uiState.uploadImagesSuccess, uiState.createdProductId) {
+        if (uiState.uploadImagesSuccess && uiState.createdProductId != null) {
+            productViewModel.resetUploadImagesSuccess()
             productViewModel.resetCreateSuccess()
+            onProductCreated(uiState.createdProductId!!)
         }
     }
     
@@ -99,7 +147,7 @@ fun CreateProductScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -195,7 +243,10 @@ fun CreateProductScreen(
                     
                     OutlinedTextField(
                         value = productName,
-                        onValueChange = { productName = it },
+                        onValueChange = { 
+                            productName = it
+                            productNameError = false
+                        },
                         placeholder = {
                             Text(
                                 "Masukkan nama produk",
@@ -227,7 +278,10 @@ fun CreateProductScreen(
                     
                     OutlinedTextField(
                         value = sku,
-                        onValueChange = { sku = it.uppercase() },
+                        onValueChange = { 
+                            sku = it.uppercase()
+                            skuError = false
+                        },
                         placeholder = {
                             Text(
                                 "Masukkan SKU (kode unik produk)",
@@ -397,37 +451,101 @@ fun CreateProductScreen(
                     )
                 }
                 
-                // Thumbnail URL (Optional)
+                // Product Images (Optional, Max 20)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "URL Thumbnail (Opsional)",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Black
-                    )
-                    
-                    OutlinedTextField(
-                        value = thumbnailUrl,
-                        onValueChange = { thumbnailUrl = it },
-                        placeholder = {
-                            Text(
-                                "Masukkan URL gambar produk",
-                                color = Color(0xFF9CA3AF)
-                            )
-                        },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF10B981),
-                            unfocusedBorderColor = Color(0xFFE5E7EB),
-                            cursorColor = Color(0xFF10B981)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Gambar Produk (Opsional, Max 20)",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Black
+                        )
+                        Text(
+                            text = "${selectedImages.size}/20",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6B7280)
+                        )
+                    }
+                    
+                    // Image Grid
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(if (selectedImages.isEmpty()) 100.dp else (100.dp * ((selectedImages.size + 2) / 3 + 1)).coerceAtMost(300.dp))
+                    ) {
+                        items(selectedImages) { uri ->
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                            ) {
+                                AsyncImage(
+                                    model = uri,
+                                    contentDescription = "Product Image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = {
+                                        selectedImages = selectedImages.filter { it != uri }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Remove",
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                            .padding(4.dp)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Add Image Button
+                        if (selectedImages.size < 20) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .border(2.dp, Color(0xFFE5E7EB), RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Add,
+                                            contentDescription = "Add Image",
+                                            tint = Color(0xFF6B7280),
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Text(
+                                            text = "Tambah",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF6B7280)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 // Is Active Toggle
@@ -481,7 +599,7 @@ fun CreateProductScreen(
                                 price = price.toIntOrNull() ?: 0,
                                 stock = stock.toIntOrNull() ?: 0,
                                 weight = weight.takeIf { it.isNotBlank() }?.toIntOrNull(),
-                                thumbnail = thumbnailUrl.takeIf { it.isNotBlank() },
+                                thumbnail = null, // Images will be uploaded separately
                                 isActive = isActive,
                                 isFeatured = isFeatured
                             )
@@ -493,7 +611,7 @@ fun CreateProductScreen(
                         .height(56.dp),
                     enabled = selectedCategoryId != null && productName.isNotBlank() && 
                              sku.isNotBlank() && price.isNotBlank() && stock.isNotBlank() && 
-                             !uiState.isLoading,
+                             !uiState.isLoading && !uiState.isUploadingImages,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF10B981),
                         contentColor = White,
@@ -502,7 +620,7 @@ fun CreateProductScreen(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    if (uiState.isLoading) {
+                    if (uiState.isLoading || uiState.isUploadingImages) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = White,
