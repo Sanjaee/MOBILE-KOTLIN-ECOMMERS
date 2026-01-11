@@ -237,4 +237,50 @@ class ProductRepository(private val context: Context? = null) {
             errorBody.takeIf { it.length < 200 } ?: "Terjadi kesalahan"
         }
     }
+    
+    suspend fun searchProducts(
+        keyword: String,
+        page: Int = 1,
+        limit: Int = 20,
+        activeOnly: Boolean = true
+    ): Result<ProductListResponse> {
+        return try {
+            if (keyword.isBlank()) {
+                return Result.success(ProductListResponse(products = emptyList(), total = 0, page = page, limit = limit))
+            }
+            
+            val activeOnlyStr = if (activeOnly) "true" else "false"
+            
+            val response = apiService.searchProducts(
+                keyword = keyword.trim(),
+                page = page,
+                limit = limit,
+                activeOnly = activeOnlyStr
+            )
+            
+            if (response.isSuccessful && response.body()?.success == true) {
+                val data = response.body()?.data
+                if (data != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(Exception("No data received"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    400 -> parseErrorMessage(response.errorBody()?.string()) ?: "Keyword pencarian tidak valid."
+                    404 -> "Produk tidak ditemukan."
+                    else -> parseErrorMessage(response.errorBody()?.string()) ?: "Gagal mencari produk. Kode error: ${response.code()}"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            val errorMessage = when {
+                e.message?.contains("Unable to resolve host") == true -> "Tidak dapat terhubung ke server. Periksa koneksi internet Anda."
+                e.message?.contains("timeout") == true -> "Koneksi timeout. Silakan coba lagi."
+                e.message?.contains("SocketTimeoutException") == true -> "Waktu koneksi habis. Silakan coba lagi."
+                else -> e.message ?: "Terjadi kesalahan: ${e.javaClass.simpleName}"
+            }
+            Result.failure(Exception(errorMessage))
+        }
+    }
 }

@@ -63,7 +63,7 @@ private fun BottomNavigationBar(
 ) {
     NavigationBar(
         containerColor = Color.White,
-        tonalElevation = 8.dp
+        tonalElevation = 0.dp
     ) {
         // Home
         NavigationBarItem(

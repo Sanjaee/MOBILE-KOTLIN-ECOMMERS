@@ -72,6 +72,12 @@ sealed class Screen(val route: String) {
     object MyStoreDetail : Screen("my_store_detail")
     
     object CreateProduct : Screen("create_product")
+    
+    object Search : Screen("search")
+    
+    object SearchResult : Screen("search_result/{keyword}") {
+        fun createRoute(keyword: String) = "search_result/${android.net.Uri.encode(keyword)}"
+    }
 }
 
 // Slide animation helper - Gojek style
@@ -349,6 +355,9 @@ fun NavGraph(
                 HomeScreenContent(
                     onProductClick = { productId ->
                         navController.navigate(Screen.ProductDetail.createRoute(productId))
+                    },
+                    onSearchClick = {
+                        navController.navigate(Screen.Search.route)
                     }
                 )
             }
@@ -708,6 +717,46 @@ fun NavGraph(
                     navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.Search.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            SearchScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onSearchClick = { keyword ->
+                    navController.navigate(Screen.SearchResult.createRoute(keyword))
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.SearchResult.route,
+            arguments = listOf(navArgument("keyword") { type = NavType.StringType }),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val keyword = backStackEntry.arguments?.getString("keyword")?.let {
+                android.net.Uri.decode(it)
+            } ?: ""
+            
+            SearchResultScreen(
+                keyword = keyword,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onProductClick = { productId ->
+                    navController.navigate(Screen.ProductDetail.createRoute(productId))
                 }
             )
         }

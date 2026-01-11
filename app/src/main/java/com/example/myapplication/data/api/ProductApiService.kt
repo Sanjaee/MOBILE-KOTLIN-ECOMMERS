@@ -15,6 +15,14 @@ interface ProductApiService {
         @Query("active_only") activeOnly: String? = null
     ): Response<ApiResponse<ProductListResponse>>
     
+    @GET("api/v1/products/search")
+    suspend fun searchProducts(
+        @Query("q") keyword: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20,
+        @Query("active_only") activeOnly: String? = "true"
+    ): Response<ApiResponse<ProductListResponse>>
+    
     @GET("api/v1/products/{id}")
     suspend fun getProductById(@Path("id") id: String): Response<ApiResponse<Product>>
     

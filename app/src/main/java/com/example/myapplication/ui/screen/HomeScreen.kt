@@ -50,6 +50,7 @@ val LocalOnLogout = compositionLocalOf<() -> Unit> { {} }
 @Composable
 fun HomeScreenContent(
     onProductClick: (String) -> Unit,
+    onSearchClick: () -> Unit = {},
     onLogout: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
@@ -120,7 +121,8 @@ fun HomeScreenContent(
                     HomeNavBar(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        onSearchClick = onSearchClick
                     )
                 }
                 

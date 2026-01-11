@@ -25,7 +25,17 @@ data class ProductUiState(
     val createdProductId: String? = null,
     val categories: List<Category> = emptyList(),
     val isUploadingImages: Boolean = false,
-    val uploadImagesSuccess: Boolean = false
+    val uploadImagesSuccess: Boolean = false,
+    // Search states
+    val searchResults: List<Product> = emptyList(),
+    val isSearching: Boolean = false,
+    val searchKeyword: String = "",
+    val searchTotal: Long = 0,
+    val searchPage: Int = 1,
+    val searchHasMore: Boolean = false,
+    // Search suggestions
+    val searchSuggestions: List<String> = emptyList(),
+    val isSearchingSuggestions: Boolean = false
 )
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
@@ -229,7 +239,7 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
             )
             
             repository.uploadProductImages(productId, imageUris).fold(
-                onSuccess = { response ->
+                onSuccess = { _ ->
                     _uiState.value = _uiState.value.copy(
                         isUploadingImages = false,
                         uploadImagesSuccess = true
@@ -250,6 +260,104 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     fun resetUploadImagesSuccess() {
         _uiState.value = _uiState.value.copy(
             uploadImagesSuccess = false
+        )
+    }
+    
+    fun searchProducts(keyword: String, page: Int = 1, limit: Int = 20, append: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSearching = true,
+                searchKeyword = keyword,
+                errorMessage = null,
+                isTokenExpired = false
+            )
+            
+            repository.searchProducts(
+                keyword = keyword,
+                page = page,
+                limit = limit,
+                activeOnly = true
+            ).fold(
+                onSuccess = { response ->
+                    val newProducts = if (append) {
+                        _uiState.value.searchResults + response.products
+                    } else {
+                        response.products
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isSearching = false,
+                        searchResults = newProducts,
+                        searchTotal = response.total,
+                        searchPage = response.page,
+                        searchHasMore = (response.page * response.limit) < response.total,
+                        errorMessage = null
+                    )
+                },
+                onFailure = { exception ->
+                    val isTokenExpired = exception is TokenExpiredException
+                    _uiState.value = _uiState.value.copy(
+                        isSearching = false,
+                        errorMessage = exception.message ?: "Failed to search products",
+                        isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
+    fun resetSearchState() {
+        _uiState.value = _uiState.value.copy(
+            searchResults = emptyList(),
+            searchKeyword = "",
+            searchTotal = 0,
+            searchPage = 1,
+            searchHasMore = false,
+            isSearching = false
+        )
+    }
+    
+    fun searchSuggestions(keyword: String) {
+        if (keyword.isBlank() || keyword.length < 2) {
+            _uiState.value = _uiState.value.copy(
+                searchSuggestions = emptyList(),
+                isSearchingSuggestions = false
+            )
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSearchingSuggestions = true
+            )
+            
+            repository.searchProducts(
+                keyword = keyword,
+                page = 1,
+                limit = 10, // Limit kecil untuk suggestions
+                activeOnly = true
+            ).fold(
+                onSuccess = { response ->
+                    // Extract unique product names as suggestions
+                    val suggestions = response.products.map { it.name }.distinct()
+                    _uiState.value = _uiState.value.copy(
+                        searchSuggestions = suggestions,
+                        isSearchingSuggestions = false
+                    )
+                },
+                onFailure = { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        searchSuggestions = emptyList(),
+                        isSearchingSuggestions = false
+                    )
+                }
+            )
+        }
+    }
+    
+    fun clearSearchSuggestions() {
+        _uiState.value = _uiState.value.copy(
+            searchSuggestions = emptyList(),
+            isSearchingSuggestions = false
         )
     }
 }
