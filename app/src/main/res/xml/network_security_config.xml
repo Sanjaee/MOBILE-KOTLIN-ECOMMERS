@@ -8,6 +8,18 @@
         <domain includeSubdomains="true">10.0.2.2</domain>
     </domain-config>
     
+    <!-- Allow HTTPS for API and image CDNs -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.zascript.com</domain>
+        <domain includeSubdomains="true">tokopedia-static.net</domain>
+        <domain includeSubdomains="true">p16-images-sign-sg.tokopedia-static.net</domain>
+        <domain includeSubdomains="true">cloudinary.com</domain>
+        <domain includeSubdomains="true">res.cloudinary.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+    
     <!-- Base configuration for production (HTTPS only) -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>

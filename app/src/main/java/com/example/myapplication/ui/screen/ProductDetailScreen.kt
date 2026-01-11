@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.myapplication.data.api.ApiClient
 import com.example.myapplication.R
 import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.theme.Black
@@ -239,7 +240,7 @@ fun ProductDetailScreen(
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
-                                .data(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl)
+                                .data(ApiClient.getImageUrl(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = product.name,
@@ -728,7 +729,8 @@ fun ProductDetailBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -797,8 +799,9 @@ fun ProductDetailBottomBar(
 
 private fun formatPriceDetail(price: Int): String {
     @Suppress("DEPRECATION")
-    val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return formatter.format(price)
+    val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedNumber = formatter.format(price)
+    return "Rp$formattedNumber"
 }
 
 private fun formatSoldCountDetail(soldCount: Int): String {

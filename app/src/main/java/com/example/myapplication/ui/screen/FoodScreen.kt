@@ -22,7 +22,7 @@ fun FoodScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Food",
+                text = "Feed",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Black

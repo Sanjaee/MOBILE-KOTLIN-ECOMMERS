@@ -55,6 +55,20 @@ data class OrderItem(
     val product: Product? = null
 )
 
+data class OrdersListResponse(
+    @SerializedName("orders")
+    val orders: List<Order>,
+    
+    @SerializedName("total")
+    val total: Long,
+    
+    @SerializedName("page")
+    val page: Int,
+    
+    @SerializedName("limit")
+    val limit: Int
+)
+
 data class CreateOrderRequest(
     @SerializedName("shipping_address_id") val shippingAddressId: String,
     @SerializedName("order_items") val orderItems: List<CreateOrderItemRequest>,

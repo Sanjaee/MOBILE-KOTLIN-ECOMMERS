@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.myapplication.data.api.ApiClient
 import com.example.myapplication.R
 import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.theme.Black
@@ -61,7 +62,7 @@ fun ProductCard(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl)
+                        .data(ApiClient.getImageUrl(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl))
                         .crossfade(true)
                         .build(),
                     contentDescription = product.name,
@@ -147,8 +148,9 @@ fun ProductCard(
 
 private fun formatPrice(price: Int): String {
     @Suppress("DEPRECATION")
-    val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return formatter.format(price)
+    val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedNumber = formatter.format(price)
+    return "Rp$formattedNumber"
 }
 
 private fun formatSoldCount(soldCount: Int): String {

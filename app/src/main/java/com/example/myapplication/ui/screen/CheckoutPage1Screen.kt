@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.myapplication.data.api.ApiClient
 import com.example.myapplication.R
 import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.theme.Black
@@ -158,38 +159,44 @@ fun CheckoutPage1Screen(
                 )
             },
             bottomBar = {
+                val order = checkoutUiState.orders.firstOrNull()
+                val selectedPaymentMethod = checkoutUiState.selectedPaymentMethod
+                val selectedAddress = checkoutUiState.selectedShippingAddress
+                val canProceed = order != null && selectedPaymentMethod != null && selectedAddress != null
+                
                 CheckoutBottomBar(
                     total = checkoutUiState.summary?.total ?: 0,
                     isLoading = paymentUiState.isLoading,
+                    enabled = canProceed && !paymentUiState.isLoading,
                     onPayClick = {
                         // Create order and payment
-                        val order = checkoutUiState.orders.firstOrNull()
-                        val selectedPaymentMethod = checkoutUiState.selectedPaymentMethod
-                        val selectedAddress = checkoutUiState.selectedShippingAddress
+                        // Validasi sudah dilakukan di enabled state, tapi double check untuk safety
+                        val validOrder = order ?: return@CheckoutBottomBar
+                        val validPaymentMethod = selectedPaymentMethod ?: return@CheckoutBottomBar
+                        val validAddress = selectedAddress ?: return@CheckoutBottomBar
                         
-                        if (order != null && selectedPaymentMethod != null && selectedAddress != null) {
-                            // Map payment method type to backend format
-                            val paymentMethodType = when (selectedPaymentMethod.type) {
-                                "virtual_account" -> {
-                                    // Extract bank from payment method name (e.g., "BCA Virtual Account" -> "bca")
-                                    when {
-                                        selectedPaymentMethod.name.contains("BCA", ignoreCase = true) -> "bca"
-                                        selectedPaymentMethod.name.contains("BNI", ignoreCase = true) -> "bni"
-                                        selectedPaymentMethod.name.contains("Mandiri", ignoreCase = true) -> "mandiri"
-                                        selectedPaymentMethod.name.contains("BRI", ignoreCase = true) -> "bri"
-                                        else -> "bca"
-                                    }
+                        // Map payment method type to backend format
+                        val paymentMethodType = when (validPaymentMethod.type) {
+                            "virtual_account" -> {
+                                // Extract bank from payment method name (e.g., "BCA Virtual Account" -> "bca")
+                                when {
+                                    validPaymentMethod.name.contains("BCA", ignoreCase = true) -> "bca"
+                                    validPaymentMethod.name.contains("BNI", ignoreCase = true) -> "bni"
+                                    validPaymentMethod.name.contains("Mandiri", ignoreCase = true) -> "mandiri"
+                                    validPaymentMethod.name.contains("BRI", ignoreCase = true) -> "bri"
+                                    else -> "bca"
                                 }
-                                else -> null
                             }
-                            
-                            paymentViewModel.createOrderAndPayment(
-                                checkoutOrder = order,
-                                shippingAddressId = selectedAddress.id,
-                                paymentMethod = selectedPaymentMethod.type,
-                                bank = paymentMethodType
-                            )
+                            else -> null
                         }
+                        
+                        // Create order and payment
+                        paymentViewModel.createOrderAndPayment(
+                            checkoutOrder = validOrder,
+                            shippingAddressId = validAddress.id,
+                            paymentMethod = validPaymentMethod.type,
+                            bank = paymentMethodType
+                        )
                     }
                 )
             },
@@ -471,7 +478,7 @@ private fun OrderItemCard(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl)
+                    .data(ApiClient.getImageUrl(product.thumbnail ?: product.images?.firstOrNull()?.imageUrl))
                     .crossfade(true)
                     .build(),
                 contentDescription = product.name,
@@ -503,17 +510,11 @@ private fun OrderItemCard(
                 )
             }
             
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Price Section: Original price (crossed out) on top, discount percentage and discounted price below
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = formatPrice(item.price),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Black
-                )
-                
+                // Original Price (Crossed out) - shown on top if exists
                 item.originalPrice?.let { originalPrice ->
                     if (originalPrice > item.price) {
                         Text(
@@ -522,6 +523,31 @@ private fun OrderItemCard(
                             color = Color(0xFF6B7280),
                             textDecoration = TextDecoration.LineThrough
                         )
+                    }
+                }
+                
+                // Discounted Price and Discount Percentage - shown below
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = formatPrice(item.price),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black
+                    )
+                    
+                    item.originalPrice?.let { originalPrice ->
+                        if (originalPrice > item.price) {
+                            val discountPercent = ((originalPrice - item.price) * 100 / originalPrice)
+                            Text(
+                                text = "$discountPercent%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFDC2626)
+                            )
+                        }
                     }
                 }
             }
@@ -872,6 +898,7 @@ private fun PaymentLogoBox(methodId: String) {
         methodId == "MANDIRI_VA" -> "MDR"
         methodId == "BRI_VA" -> "BRI"
         methodId == "ALFAMART" -> "ALF"
+        methodId == "QRIS" -> "QR"
         else -> ""
     }
     
@@ -880,6 +907,7 @@ private fun PaymentLogoBox(methodId: String) {
         methodId == "MANDIRI_VA" -> Color(0xFFFFC107) // Mandiri Yellow
         methodId == "BRI_VA" -> Color(0xFF1976D2) // BRI Blue
         methodId == "ALFAMART" -> Color(0xFFDC2626) // Alfamart Red
+        methodId == "QRIS" -> Color(0xFF10B981) // QRIS Green
         else -> Color(0xFF6B7280)
     }
     
@@ -1156,6 +1184,7 @@ private fun DetailedSummaryRowWithIcon(
 private fun CheckoutBottomBar(
     total: Int,
     isLoading: Boolean = false,
+    enabled: Boolean = true,
     onPayClick: () -> Unit
 ) {
     Surface(
@@ -1165,7 +1194,8 @@ private fun CheckoutBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(bottom = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1200,7 +1230,7 @@ private fun CheckoutBottomBar(
                     .height(48.dp)
                     .widthIn(min = 160.dp),
                 shape = RoundedCornerShape(8.dp),
-                enabled = !isLoading,
+                enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF10B981),
                     disabledContainerColor = Color(0xFF9CA3AF)
@@ -1233,8 +1263,10 @@ private fun CheckoutBottomBar(
 }
 
 private fun formatPrice(price: Int): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return formatter.format(price)
+    @Suppress("DEPRECATION")
+    val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedNumber = formatter.format(price)
+    return "Rp$formattedNumber"
 }
 
 private fun formatSavings(savings: Int): String {

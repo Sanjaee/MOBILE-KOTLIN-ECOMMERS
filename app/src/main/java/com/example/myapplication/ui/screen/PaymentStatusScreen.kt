@@ -19,13 +19,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.myapplication.ui.components.product.ProductCard
 import com.example.myapplication.ui.components.product.ProductListSection
 import com.example.myapplication.ui.theme.Black
@@ -105,6 +110,13 @@ fun PaymentStatusScreen(
         hasNavigated = false
     }
     
+    // Stop polling when screen is disposed (user leaves the screen)
+    DisposableEffect(Unit) {
+        onDispose {
+            paymentViewModel.stopPolling()
+        }
+    }
+    
     LaunchedEffect(uiState.countdownSeconds) {
         countdown = uiState.countdownSeconds
     }
@@ -127,11 +139,25 @@ fun PaymentStatusScreen(
     
     Scaffold(
         topBar = {
-            PaymentStatusTopBar(
-                onBack = onBack,
-                onSearchClick = { /* Navigate to search */ },
-                onCartClick = { /* Navigate to cart */ },
-                onMenuClick = { /* Open menu */ }
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Payment Status",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Black
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
             )
         },
         containerColor = Color(0xFFF5F5F5)
@@ -198,16 +224,6 @@ fun PaymentStatusScreen(
                 // Recommendations
                 if (productUiState.products.isNotEmpty()) {
                     item {
-                        Text(
-                            text = "Rekomendasi untuk Anda",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Black,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                        )
-                    }
-                    
-                    item {
                         ProductListSection(
                             title = "Rekomendasi untuk Anda",
                             products = productUiState.products.take(4),
@@ -237,40 +253,56 @@ private fun PaymentStatusTopBar(
     onCartClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
-    TopAppBar(
-        title = { Text("") },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
+    Surface(
+        color = White,
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back Button
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Black
+                    tint = Black,
+                    modifier = Modifier.size(24.dp)
                 )
             }
-        },
-        actions = {
-            // Search bar
-            Row(
+            
+            // Search Bar
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White)
+                    .drawBehind {
+                        drawRect(
+                            color = Color(0xFFD1D5DB),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                        )
+                    }
+                    .clickable(onClick = onSearchClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(36.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFF5F5F5)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable(onClick = onSearchClick)
-                            .padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.weight(1f)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
@@ -280,40 +312,32 @@ private fun PaymentStatusTopBar(
                         )
                         Text(
                             text = "Cari di Tokopedia",
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
                             color = Color(0xFF9CA3AF)
                         )
                     }
+                    TextButton(
+                        onClick = onSearchClick,
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Black
+                        )
+                    ) {
+                        Text(
+                            text = "Cari",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-                TextButton(onClick = onSearchClick) {
-                    Text(
-                        text = "Cari",
-                        fontSize = 12.sp,
-                        color = Color(0xFF10B981)
-                    )
-                }
             }
             
-            IconButton(onClick = { /* Navigate to messages */ }) {
-                Icon(
-                    imageVector = Icons.Outlined.Email,
-                    contentDescription = "Messages",
-                    tint = Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            IconButton(onClick = { /* Navigate to notifications */ }) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            Box {
-                IconButton(onClick = onCartClick) {
+            // Shopping Cart
+            Box(modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onCartClick,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.ShoppingCart,
                         contentDescription = "Cart",
@@ -321,39 +345,22 @@ private fun PaymentStatusTopBar(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                // Cart badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(18.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFEF4444)
-                ) {
-                    Text(
-                        text = "1",
-                        fontSize = 10.sp,
-                        color = White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxSize(),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
             
-            IconButton(onClick = onMenuClick) {
+            // Menu
+            IconButton(
+                onClick = onMenuClick,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
-                    imageVector = Icons.Outlined.Menu,
+                    imageVector = Icons.Outlined.MoreVert,
                     contentDescription = "Menu",
                     tint = Black,
                     modifier = Modifier.size(24.dp)
                 )
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = White,
-            titleContentColor = Black
-        )
-    )
+        }
+    }
 }
 
 @Composable
@@ -438,97 +445,74 @@ private fun PaymentDetailsCard(
                 }
             }
             
-            Divider(color = Color(0xFFE5E7EB))
+            HorizontalDivider(color = Color(0xFFE5E7EB))
             
-            // Savings Banner
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = Color(0xFFECFDF5)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Virtual Account Number (only for bank_transfer payment method)
+            val isBankTransfer = payment.paymentMethod?.lowercase() == "bank_transfer" || 
+                                 payment.paymentMethod?.lowercase() == "virtual_account"
+            
+            if (isBankTransfer && payment.vaNumber != null) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.LocalOffer,
-                        contentDescription = "Savings",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(18.dp)
-                    )
                     Text(
-                        text = "Kamu hemat Rp1.700 dari transaksi ini",
-                        fontSize = 13.sp,
-                        color = Color(0xFF065F46),
-                        fontWeight = FontWeight.Medium
+                        text = "Nomor Virtual Account",
+                        fontSize = 12.sp,
+                        color = Color(0xFF6B7280)
                     )
-                }
-            }
-            
-            // Virtual Account Number
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Nomor Virtual Account",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = payment.vaNumber ?: "N/A",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Black
-                        )
-                        IconButton(
-                            onClick = { payment.vaNumber?.let { onCopyVANumber(it) } },
-                            modifier = Modifier.size(32.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.ContentCopy,
-                                contentDescription = "Copy",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(18.dp)
+                            Text(
+                                text = payment.vaNumber ?: "N/A",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Black
                             )
-                        }
-                    }
-                    
-                    // Bank Logo (BCA)
-                    if (payment.bankType?.lowercase() == "bca") {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFF1E3A8A)
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                            IconButton(
+                                onClick = { payment.vaNumber?.let { onCopyVANumber(it) } },
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                Text(
-                                    text = "BCA",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = White
+                                Icon(
+                                    imageVector = Icons.Outlined.ContentCopy,
+                                    contentDescription = "Copy",
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(18.dp)
                                 )
+                            }
+                        }
+                        
+                        // Bank Logo (BCA)
+                        if (payment.bankType?.lowercase() == "bca") {
+                            Surface(
+                                modifier = Modifier.size(40.dp),
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFF1E3A8A)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "BCA",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = White
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                
+                HorizontalDivider(color = Color(0xFFE5E7EB))
             }
-            
-            Divider(color = Color(0xFFE5E7EB))
             
             // Total Bill
             Column(
@@ -577,11 +561,13 @@ private fun PaymentDetailsCard(
                 }
             }
             
-            // QR Code Section (for Gopay/QRIS) - show after VA number if available
-            if (payment.qrCodeUrl != null && !payment.qrCodeUrl.isNullOrEmpty()) {
-                Divider(color = Color(0xFFE5E7EB))
+            // QR Code Section (for QRIS) - show after Total Bill
+            val isQRIS = payment.paymentMethod?.lowercase() == "qris"
+            if (isQRIS && payment.qrCodeUrl != null && !payment.qrCodeUrl.isNullOrEmpty()) {
+                HorizontalDivider(color = Color(0xFFE5E7EB))
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -590,34 +576,79 @@ private fun PaymentDetailsCard(
                         fontWeight = FontWeight.Medium,
                         color = Black
                     )
-                    // QR Code would be displayed here using Coil or QR code library
-                    // For now, placeholder - in production, use QR code library to generate from URL
+                    
+                    // Display QR Code from URL using Coil
+                    val context = LocalContext.current
                     Surface(
-                        modifier = Modifier.size(200.dp),
+                        modifier = Modifier.size(280.dp),
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF5F5F5)
+                        color = Color.White,
+                        shadowElevation = 2.dp
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(payment.qrCodeUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "QR Code",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    
+                    // Action Buttons below QR Code
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { /* Download QRIS */ },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF10B981)
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Color(0xFF10B981)
+                            )
                         ) {
                             Text(
-                                text = "QR Code",
-                                fontSize = 12.sp,
-                                color = Color(0xFF6B7280)
+                                text = "Download QRIS",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        
+                        OutlinedButton(
+                            onClick = onCheckStatus,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF10B981)
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Color(0xFF10B981)
+                            )
+                        ) {
+                            Text(
+                                text = "Cek Status Bayar",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
             }
             
-            Divider(color = Color(0xFFE5E7EB))
+            HorizontalDivider(color = Color(0xFFE5E7EB))
             
             // Important Notes
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (payment.bankType != null && payment.vaNumber != null) {
+                if (isBankTransfer && payment.bankType != null && payment.vaNumber != null) {
                     Text(
                         text = "Penting: Transfer Virtual Account hanya bisa dilakukan dari bank yang kamu pilih",
                         fontSize = 12.sp,
@@ -633,47 +664,31 @@ private fun PaymentDetailsCard(
                 )
             }
             
-            Divider(color = Color(0xFFE5E7EB))
-            
-            // Action Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onSeePaymentGuide,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF10B981)
-                    ),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = Color(0xFF10B981)
-                    )
+            // QRIS Instructions (only for QRIS)
+            if (isQRIS) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = Color(0xFFE5E7EB)
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Lihat Cara Bayar",
+                        text = "Panduan Pembayaran QRIS:",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold,
+                        color = Black
                     )
-                }
-                
-                OutlinedButton(
-                    onClick = onCheckStatus,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF10B981)
-                    ),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = Color(0xFF10B981)
-                    )
-                ) {
-                    Text(
-                        text = "Cek Status Bayar",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        QRISInstructionItem("Download atau screenshot QRIS.")
+                        QRISInstructionItem("Buka aplikasi bank atau e-wallet yang mendukung pembayaran QRIS di HP-mu.")
+                        QRISInstructionItem("Scan atau upload QR code di atas.")
+                        QRISInstructionItem("Pastikan total tagihan sudah benar, lalu lanjutkan proses pembayaran.")
+                        QRISInstructionItem("Setelah berhasil, kamu bisa cek status bayar untuk konfirmasi pembayaranmu.")
+                    }
                 }
             }
         }
@@ -701,8 +716,33 @@ private fun formatCountdown(seconds: Long): String {
 }
 
 private fun formatPrice(amount: Int): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return formatter.format(amount).replace("Rp", "Rp").replace(",00", "")
+    @Suppress("DEPRECATION")
+    val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedNumber = formatter.format(amount)
+    return "Rp$formattedNumber"
+}
+
+@Composable
+private fun QRISInstructionItem(text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = "•",
+            fontSize = 14.sp,
+            color = Color(0xFF6B7280),
+            modifier = Modifier.padding(top = 2.dp)
+        )
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = Color(0xFF6B7280),
+            lineHeight = 18.sp,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
 
 private fun copyToClipboard(context: Context, text: String, label: String) {

@@ -61,9 +61,15 @@ class OrderRepository {
         }
     }
     
-    suspend fun getOrders(token: String): Result<List<Order>> = withContext(Dispatchers.IO) {
+    suspend fun getOrders(
+        page: Int = 1,
+        limit: Int = 10,
+        status: String? = null,
+        paymentStatus: String? = null,
+        token: String
+    ): Result<OrdersListResponse> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.getOrders("Bearer $token")
+            val response = apiService.getOrders(page, limit, status, paymentStatus, "Bearer $token")
             
             if (response.isSuccessful && response.body()?.success == true) {
                 val data = response.body()?.data

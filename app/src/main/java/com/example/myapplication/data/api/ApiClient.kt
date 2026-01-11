@@ -9,6 +9,31 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
     private const val BASE_URL = "http://192.168.194.248:5000/"
     
+    /**
+     * Helper function to get full image URL
+     * If imageUrl is null or empty, returns null
+     * If imageUrl is already absolute (starts with http:// or https://), returns as is
+     * Fixes common typos like "hhttps://" -> "https://"
+     * Otherwise, combines with BASE_URL
+     */
+    fun getImageUrl(imageUrl: String?): String? {
+        if (imageUrl.isNullOrBlank()) return null
+        
+        // Fix common typo: "hhttps://" -> "https://"
+        var fixedUrl = imageUrl.trim()
+        if (fixedUrl.startsWith("hhttps://")) {
+            fixedUrl = "https://" + fixedUrl.substring(9) // Remove "hhttps://" and add "https://"
+        }
+        
+        return if (fixedUrl.startsWith("http://") || fixedUrl.startsWith("https://")) {
+            fixedUrl
+        } else {
+            // Remove leading slash if present to avoid double slashes
+            val path = if (fixedUrl.startsWith("/")) fixedUrl.substring(1) else fixedUrl
+            BASE_URL + path
+        }
+    }
+    
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }

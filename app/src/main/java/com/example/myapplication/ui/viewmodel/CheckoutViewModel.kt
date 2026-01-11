@@ -96,6 +96,11 @@ class CheckoutViewModel(application: Application) : AndroidViewModel(application
                     id = "BRI_VA",
                     name = "BRI Virtual Account",
                     type = "virtual_account"
+                ),
+                PaymentMethod(
+                    id = "QRIS",
+                    name = "QRIS",
+                    type = "qris"
                 )
             )
             

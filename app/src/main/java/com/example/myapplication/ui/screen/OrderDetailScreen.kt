@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.myapplication.data.api.ApiClient
 import com.example.myapplication.R
 import com.example.myapplication.data.model.Order
 import com.example.myapplication.data.model.OrderItem
@@ -284,8 +285,8 @@ fun OrderDetailContent(
             totalAmount = order.totalAmount
         )
         
-        // Bottom spacing
-        Spacer(modifier = Modifier.height(16.dp))
+        // Bottom spacing for consistency with other screens
+        Spacer(modifier = Modifier.height(100.dp))
     }
 }
 
@@ -495,7 +496,7 @@ fun ProductDetailItem(
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(orderItem.product?.thumbnail ?: orderItem.product?.images?.firstOrNull()?.imageUrl)
+                    .data(ApiClient.getImageUrl(orderItem.product?.thumbnail ?: orderItem.product?.images?.firstOrNull()?.imageUrl))
                     .crossfade(true)
                     .build(),
                 contentDescription = orderItem.productName,
@@ -1118,8 +1119,10 @@ fun BuyAgainButton(
 
 // Helper functions for OrderDetailScreen
 private fun formatPriceOrderDetail(price: Int): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return formatter.format(price)
+    @Suppress("DEPRECATION")
+    val formatter = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedNumber = formatter.format(price)
+    return "Rp$formattedNumber"
 }
 
 private fun formatPriceShortOrderDetail(price: Int): String {

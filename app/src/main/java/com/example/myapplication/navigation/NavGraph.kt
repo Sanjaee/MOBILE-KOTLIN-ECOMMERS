@@ -425,7 +425,14 @@ fun NavGraph(
                 },
                 onProductClick = { }
             ) {
-                TransaksiScreen()
+                TransaksiScreen(
+                    onOrderClick = { orderId ->
+                        navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                    },
+                    onPaymentClick = { paymentId ->
+                        navController.navigate(Screen.PaymentStatus.createRoute(paymentId))
+                    }
+                )
             }
         }
         
