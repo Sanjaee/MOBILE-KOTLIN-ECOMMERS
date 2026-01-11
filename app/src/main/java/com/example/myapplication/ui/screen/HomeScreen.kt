@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screen
 
 import android.app.Application
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,9 +44,13 @@ import com.example.myapplication.ui.viewmodel.HomeViewModel
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
 
+// CompositionLocal for onLogout callback
+val LocalOnLogout = compositionLocalOf<() -> Unit> { {} }
+
 @Composable
 fun HomeScreenContent(
     onProductClick: (String) -> Unit,
+    onLogout: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     ),
@@ -56,10 +61,20 @@ fun HomeScreenContent(
     val homeUiState by homeViewModel.uiState.collectAsState()
     val productUiState by productViewModel.uiState.collectAsState()
     
+    // Get onLogout from CompositionLocal or parameter
+    val logoutCallback = if (onLogout != {}) onLogout else LocalOnLogout.current
+    
     // Track refresh state separately to avoid conflicts with initial loading
     var isRefreshing by remember { mutableStateOf(false) }
     
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
+    
+    // Handle logout when session expires
+    LaunchedEffect(homeUiState.shouldLogout) {
+        if (homeUiState.shouldLogout) {
+            logoutCallback()
+        }
+    }
     
     // Load products on first render
     LaunchedEffect(Unit) {

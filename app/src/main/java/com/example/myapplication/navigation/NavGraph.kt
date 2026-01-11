@@ -3,6 +3,7 @@ package com.example.myapplication.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -102,7 +103,11 @@ private fun MainScreenWrapper(
         onProductClick = onProductClick,
         onProfileClick = onProfileClick
     ) {
-        content()
+        CompositionLocalProvider(
+            com.example.myapplication.ui.screen.LocalOnLogout provides onLogout
+        ) {
+            content()
+        }
     }
 }
 
@@ -548,6 +553,12 @@ fun NavGraph(
                     navController.navigate(Screen.PaymentStatus.createRoute(paymentId)) {
                         // Remove checkout from backstack so user can't go back
                         popUpTo(Screen.Checkout.route) { inclusive = true }
+                    }
+                },
+                onLogout = {
+                    onLogout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

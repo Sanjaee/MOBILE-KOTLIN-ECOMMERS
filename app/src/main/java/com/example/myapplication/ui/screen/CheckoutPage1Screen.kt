@@ -54,6 +54,7 @@ fun CheckoutPage1Screen(
     quantity: Int = 1,
     onBack: () -> Unit,
     onPayClick: (String) -> Unit, // Changed to pass paymentId
+    onLogout: () -> Unit = {},
     onAddressClick: () -> Unit = {},
     onShippingMethodClick: () -> Unit = {},
     onNoteClick: () -> Unit = {},
@@ -100,6 +101,13 @@ fun CheckoutPage1Screen(
     LaunchedEffect(paymentUiState.isLoading) {
         if (paymentUiState.isLoading) {
             hasNavigated = false
+        }
+    }
+    
+    // Handle logout when session expires
+    LaunchedEffect(paymentUiState.shouldLogout) {
+        if (paymentUiState.shouldLogout) {
+            onLogout()
         }
     }
     

@@ -14,7 +14,8 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val user: User? = null,
     val errorMessage: String? = null,
-    val isTokenExpired: Boolean = false
+    val isTokenExpired: Boolean = false,
+    val shouldLogout: Boolean = false
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -32,7 +33,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(
                 isLoading = true, 
                 errorMessage = null,
-                isTokenExpired = false
+                isTokenExpired = false,
+                shouldLogout = false
             )
             
             repository.getCurrentUser().fold(
@@ -41,7 +43,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         isLoading = false,
                         user = user,
                         errorMessage = null,
-                        isTokenExpired = false
+                        isTokenExpired = false,
+                        shouldLogout = false
                     )
                 },
                 onFailure = { error ->
@@ -50,13 +53,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             errorMessage = null, // Don't show error message
-                            isTokenExpired = true // Flag untuk redirect ke login
+                            isTokenExpired = true,
+                            shouldLogout = true // Flag untuk redirect ke login
                         )
                     } else {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             errorMessage = error.message ?: "Failed to load user data",
-                            isTokenExpired = false
+                            isTokenExpired = false,
+                            shouldLogout = false
                         )
                     }
                 }

@@ -22,6 +22,7 @@ data class PaymentUiState(
     val order: Order? = null,
     val errorMessage: String? = null,
     val isTokenExpired: Boolean = false,
+    val shouldLogout: Boolean = false,
     val isPolling: Boolean = false,
     val countdownSeconds: Long = 0
 )
@@ -46,7 +47,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null,
-                isTokenExpired = false
+                isTokenExpired = false,
+                shouldLogout = false
             )
             
             val token = preferencesManager.accessToken.first()
@@ -54,6 +56,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isTokenExpired = true,
+                    shouldLogout = true,
                     errorMessage = "Session expired. Please login again."
                 )
                 return@launch
@@ -97,7 +100,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             errorMessage = exception?.message ?: "Failed to create order",
-                            isTokenExpired = isTokenExpired
+                            isTokenExpired = isTokenExpired,
+                            shouldLogout = isTokenExpired
                         )
                     }
                     else -> {
@@ -127,6 +131,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                                     isLoading = false,
                                     errorMessage = exception?.message ?: "Failed to create payment",
                                     isTokenExpired = isTokenExpired,
+                                    shouldLogout = isTokenExpired,
                                     order = order
                                 )
                             }
@@ -160,7 +165,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null,
-                isTokenExpired = false
+                isTokenExpired = false,
+                shouldLogout = false
             )
             
             val token = preferencesManager.accessToken.first()
@@ -168,6 +174,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isTokenExpired = true,
+                    shouldLogout = true,
                     errorMessage = "Session expired. Please login again."
                 )
                 return@launch
@@ -191,7 +198,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = exception.message ?: "Failed to load payment",
-                        isTokenExpired = isTokenExpired
+                        isTokenExpired = isTokenExpired,
+                        shouldLogout = isTokenExpired
                     )
                 }
             )
@@ -225,7 +233,8 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                     val isTokenExpired = exception is TokenExpiredException
                     _uiState.value = _uiState.value.copy(
                         errorMessage = exception.message ?: "Failed to check payment status",
-                        isTokenExpired = isTokenExpired
+                        isTokenExpired = isTokenExpired,
+                        shouldLogout = isTokenExpired
                     )
                     
                     if (isTokenExpired) {
