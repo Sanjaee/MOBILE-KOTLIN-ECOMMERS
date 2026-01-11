@@ -34,6 +34,7 @@ import com.example.myapplication.R
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
 import com.example.myapplication.ui.viewmodel.ProfileViewModel
+import com.example.myapplication.ui.viewmodel.SellerViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,14 +43,20 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
     onCreateStoreClick: () -> Unit = {},
+    onNavigateToStore: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
+    ),
+    sellerViewModel: SellerViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val sellerUiState by sellerViewModel.uiState.collectAsState()
     
     LaunchedEffect(Unit) {
         viewModel.loadUserProfile()
+        sellerViewModel.checkHasStore()
     }
     
     // Handle logout when clicked
