@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +54,7 @@ fun EditProductScreen(
     var isFeatured by remember { mutableStateOf(false) }
     var selectedImages by remember { mutableStateOf<List<android.net.Uri>>(emptyList()) }
     var existingImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     
     val scrollState = rememberScrollState()
     
@@ -100,6 +103,14 @@ fun EditProductScreen(
         if (uiState.uploadImagesSuccess && uiState.createdProductId != null) {
             productViewModel.resetUploadImagesSuccess()
             productViewModel.resetCreateSuccess()
+            onProductUpdated()
+        }
+    }
+    
+    // Handle delete success - navigate back
+    LaunchedEffect(uiState.isDeleteSuccess) {
+        if (uiState.isDeleteSuccess) {
+            productViewModel.resetDeleteSuccess()
             onProductUpdated()
         }
     }
@@ -173,17 +184,17 @@ fun EditProductScreen(
                     
                     ProductForm(
                         productName = productName,
-                        onProductNameChange = { productName = it },
+                        onProductNameChange = { value -> productName = value },
                         description = description,
-                        onDescriptionChange = { description = it },
+                        onDescriptionChange = { value -> description = value },
                         sku = sku,
-                        onSkuChange = { sku = it },
+                        onSkuChange = { value -> sku = value },
                         price = price,
-                        onPriceChange = { price = it },
+                        onPriceChange = { value -> price = value },
                         stock = stock,
-                        onStockChange = { stock = it },
+                        onStockChange = { value -> stock = value },
                         weight = weight,
-                        onWeightChange = { weight = it },
+                        onWeightChange = { value -> weight = value },
                         selectedCategoryId = selectedCategoryId,
                         selectedCategoryName = selectedCategoryName,
                         onCategorySelected = { id, name ->
@@ -192,14 +203,14 @@ fun EditProductScreen(
                         },
                         categories = uiState.categories,
                         isActive = isActive,
-                        onIsActiveChange = { isActive = it },
+                        onIsActiveChange = { value -> isActive = value },
                         isFeatured = isFeatured,
-                        onIsFeaturedChange = { isFeatured = it },
+                        onIsFeaturedChange = { value -> isFeatured = value },
                         selectedImages = selectedImages,
-                        onImagesChange = { selectedImages = it },
+                        onImagesChange = { images -> selectedImages = images },
                         existingImageUrls = existingImageUrls,
                         onRemoveExistingImage = { url ->
-                            existingImageUrls = existingImageUrls.filter { it != url }
+                            existingImageUrls = existingImageUrls.filter { imageUrl -> imageUrl != url }
                         }
                     )
                     
@@ -255,6 +266,50 @@ fun EditProductScreen(
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Delete Button
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = !uiState.isLoading && !uiState.isUploadingImages && !uiState.isDeleting,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFEF4444),
+                            disabledContentColor = Color(0xFF9CA3AF)
+                        ),
+                        border = BorderStroke(
+                            width = 1.5.dp,
+                            color = Color(0xFFEF4444)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (uiState.isDeleting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color(0xFFEF4444),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Delete",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Hapus Produk",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             } else {
                 Box(
@@ -273,6 +328,101 @@ fun EditProductScreen(
                     }
                 }
             }
+        }
+        
+        // Delete Confirmation Dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    if (!uiState.isDeleting) {
+                        showDeleteDialog = false
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Delete",
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Hapus Produk?",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black
+                    )
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Apakah Anda yakin ingin menghapus produk ini?",
+                            fontSize = 14.sp,
+                            color = Color(0xFF6B7280)
+                        )
+                        if (product != null) {
+                            Text(
+                                text = "\"${product.name}\"",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Black
+                            )
+                        }
+                        Text(
+                            text = "Tindakan ini tidak dapat dibatalkan.",
+                            fontSize = 14.sp,
+                            color = Color(0xFFEF4444),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            productViewModel.deleteProduct(productId)
+                        },
+                        enabled = !uiState.isDeleting,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF4444),
+                            contentColor = White,
+                            disabledContainerColor = Color(0xFFD1D5DB),
+                            disabledContentColor = Color(0xFF9CA3AF)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (uiState.isDeleting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Hapus",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDeleteDialog = false },
+                        enabled = !uiState.isDeleting,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Batal",
+                            color = if (uiState.isDeleting) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                containerColor = White,
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     }
 }

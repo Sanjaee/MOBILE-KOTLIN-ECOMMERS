@@ -47,6 +47,12 @@ interface ProductApiService {
         @Body request: UpdateProductRequest
     ): Response<ApiResponse<Product>>
     
+    @DELETE("api/v1/products/{id}")
+    suspend fun deleteProduct(
+        @Header("Authorization") token: String,
+        @Path("id") productId: String
+    ): Response<ApiResponse<Unit>>
+    
     @Multipart
     @POST("api/v1/products/{id}/images/upload")
     suspend fun uploadProductImages(

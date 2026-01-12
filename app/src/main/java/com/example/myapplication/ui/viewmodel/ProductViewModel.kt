@@ -26,6 +26,8 @@ data class ProductUiState(
     val categories: List<Category> = emptyList(),
     val isUploadingImages: Boolean = false,
     val uploadImagesSuccess: Boolean = false,
+    val isDeleting: Boolean = false,
+    val isDeleteSuccess: Boolean = false,
     // Search states
     val searchResults: List<Product> = emptyList(),
     val isSearching: Boolean = false,
@@ -387,6 +389,39 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(
             searchSuggestions = emptyList(),
             isSearchingSuggestions = false
+        )
+    }
+    
+    fun deleteProduct(productId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isDeleting = true,
+                errorMessage = null,
+                isDeleteSuccess = false
+            )
+            
+            repository.deleteProduct(productId).fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        isDeleteSuccess = true
+                    )
+                },
+                onFailure = { exception ->
+                    val isTokenExpired = exception is TokenExpiredException
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        errorMessage = exception.message ?: "Failed to delete product",
+                        isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
+    fun resetDeleteSuccess() {
+        _uiState.value = _uiState.value.copy(
+            isDeleteSuccess = false
         )
     }
 }

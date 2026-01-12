@@ -277,6 +277,41 @@ class ProductRepository(private val context: Context? = null) {
         }
     }
     
+    suspend fun deleteProduct(productId: String): Result<Unit> {
+        return try {
+            val token = preferencesManager?.accessToken?.first()
+                ?: return Result.failure(Exception("Anda belum login. Silakan login terlebih dahulu."))
+            
+            val response = apiService.deleteProduct("Bearer $token", productId)
+            if (response.isSuccessful) {
+                val responseBody = response.body()
+                val isSuccess = responseBody?.success != false
+                if (isSuccess) {
+                    Result.success(Unit)
+                } else {
+                    val errorMessage = parseErrorMessage(response.errorBody()?.string())
+                    Result.failure(Exception(errorMessage ?: "Gagal menghapus produk"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> "Session Anda telah kadaluarsa. Silakan login ulang."
+                    403 -> "Anda tidak memiliki izin untuk menghapus produk ini."
+                    404 -> "Produk tidak ditemukan."
+                    else -> parseErrorMessage(response.errorBody()?.string()) ?: "Gagal menghapus produk. Kode error: ${response.code()}"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            val errorMessage = when {
+                e.message?.contains("Unable to resolve host") == true -> "Tidak dapat terhubung ke server. Periksa koneksi internet Anda."
+                e.message?.contains("timeout") == true -> "Koneksi timeout. Silakan coba lagi."
+                e.message?.contains("SocketTimeoutException") == true -> "Waktu koneksi habis. Silakan coba lagi."
+                else -> e.message ?: "Terjadi kesalahan: ${e.javaClass.simpleName}"
+            }
+            Result.failure(Exception(errorMessage))
+        }
+    }
+    
     suspend fun searchProducts(
         keyword: String,
         page: Int = 1,
