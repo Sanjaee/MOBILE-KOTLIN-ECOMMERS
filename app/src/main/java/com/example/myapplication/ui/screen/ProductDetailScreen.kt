@@ -820,7 +820,7 @@ fun ProductDetailBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-                .padding(bottom = 16.dp),
+                .padding(bottom = 36.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -860,7 +860,7 @@ fun ProductDetailBottomBar(
             ) {
                 Text(
                     text = "Beli Langsung",
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
             }

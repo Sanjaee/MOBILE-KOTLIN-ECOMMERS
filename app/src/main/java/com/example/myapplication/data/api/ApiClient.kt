@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    private const val BASE_URL = "https://api.zascript.com/"
+    private const val BASE_URL = "http://192.168.194.248:5000/"
     
     /**
      * Helper function to get full image URL

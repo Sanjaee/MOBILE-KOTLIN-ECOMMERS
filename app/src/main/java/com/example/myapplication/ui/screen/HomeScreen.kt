@@ -2,6 +2,7 @@ package com.example.myapplication.ui.screen
 
 import android.app.Application
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import com.example.myapplication.ui.viewmodel.ViewModelFactory
 // CompositionLocal for onLogout callback
 val LocalOnLogout = compositionLocalOf<() -> Unit> { {} }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenContent(
     onProductClick: (String) -> Unit,
@@ -116,8 +118,8 @@ fun HomeScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                // Search Bar & Cart Header (Navbar style)
-                item {
+                // Search Bar & Cart Header (Navbar style) - Sticky
+                stickyHeader {
                     HomeNavBar(
                         modifier = Modifier
                             .fillMaxWidth()

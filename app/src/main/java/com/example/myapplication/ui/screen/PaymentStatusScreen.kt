@@ -385,62 +385,75 @@ private fun PaymentDetailsCard(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Payment Deadline
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Baris 1: Icon + "Bayar sebelum" | Timer
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        shape = CircleShape,
-                        color = Color(0xFFFFF9C4)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            color = Color(0xFFFFF9C4)
                         ) {
-                            Text(
-                                text = "L",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF59E0B)
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "L",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFF59E0B)
+                                )
+                            }
                         }
-                    }
-                    Column {
                         Text(
                             text = "Bayar sebelum",
                             fontSize = 12.sp,
                             color = Color(0xFF6B7280)
                         )
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AccessTime,
+                            contentDescription = "Timer",
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(20.dp)
+                        )
                         Text(
-                            text = formatExpiryDate(payment.expiryTime),
+                            text = formatCountdown(countdownSeconds),
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Black
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEF4444)
                         )
                     }
                 }
                 
+                // Baris 2: Tanggal (kiri saja)
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.AccessTime,
-                        contentDescription = "Timer",
-                        tint = Color(0xFFEF4444),
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Spacer(modifier = Modifier.width(52.dp)) // Spacer untuk align dengan "Bayar sebelum"
                     Text(
-                        text = formatCountdown(countdownSeconds),
+                        text = formatExpiryDate(payment.expiryTime),
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFEF4444)
+                        fontWeight = FontWeight.Medium,
+                        color = Black
                     )
                 }
             }
@@ -471,7 +484,7 @@ private fun PaymentDetailsCard(
                         ) {
                             Text(
                                 text = payment.vaNumber ?: "N/A",
-                                fontSize = 16.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Black
                             )
@@ -616,7 +629,7 @@ private fun PaymentDetailsCard(
                         ) {
                             Text(
                                 text = "Download QRIS",
-                                fontSize = 13.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -634,7 +647,7 @@ private fun PaymentDetailsCard(
                         ) {
                             Text(
                                 text = "Cek Status Bayar",
-                                fontSize = 13.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }

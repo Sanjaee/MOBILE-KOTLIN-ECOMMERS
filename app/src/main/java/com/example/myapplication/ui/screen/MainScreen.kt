@@ -167,7 +167,7 @@ private fun BottomNavigationBar(
             label = {
                 Text(
                     text = BottomNavItem.Transaksi.title,
-                    fontSize = 11.sp
+                    fontSize = 10.sp
                 )
             },
             selected = selectedRoute == BottomNavItem.Transaksi.route,

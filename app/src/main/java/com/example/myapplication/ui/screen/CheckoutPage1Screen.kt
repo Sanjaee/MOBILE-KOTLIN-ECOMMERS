@@ -1202,8 +1202,8 @@ private fun CheckoutBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .padding(bottom = 20.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 40.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1219,7 +1219,7 @@ private fun CheckoutBottomBar(
                 ) {
                     Text(
                         text = formatPrice(total),
-                        fontSize = 20.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Black
                     )
@@ -1260,7 +1260,7 @@ private fun CheckoutBottomBar(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Bayar Sekarang",
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = White
                     )

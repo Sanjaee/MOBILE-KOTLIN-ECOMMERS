@@ -378,11 +378,12 @@ private fun OrderTransactionCard(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF10B981)
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = if (isPending) "Bayar" else "Beli Lagi",
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = White
                     )
