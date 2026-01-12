@@ -41,6 +41,7 @@ import com.example.myapplication.R
 import com.example.myapplication.ui.components.product.ProductListSection
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
+import com.example.myapplication.ui.viewmodel.CartViewModel
 import com.example.myapplication.ui.viewmodel.HomeViewModel
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
@@ -53,6 +54,7 @@ val LocalOnLogout = compositionLocalOf<() -> Unit> { {} }
 fun HomeScreenContent(
     onProductClick: (String) -> Unit,
     onSearchClick: () -> Unit = {},
+    onCartClick: () -> Unit = {},
     onLogout: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
@@ -64,8 +66,19 @@ fun HomeScreenContent(
     val homeUiState by homeViewModel.uiState.collectAsState()
     val productUiState by productViewModel.uiState.collectAsState()
     
+    // Cart ViewModel for cart count
+    val cartViewModel: CartViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
+    )
+    val cartUiState by cartViewModel.uiState.collectAsState()
+    
     // Get onLogout from CompositionLocal or parameter
     val logoutCallback = if (onLogout != {}) onLogout else LocalOnLogout.current
+    
+    // Load cart count on first render
+    LaunchedEffect(Unit) {
+        cartViewModel.loadCart()
+    }
     
     // Track refresh state separately to avoid conflicts with initial loading
     var isRefreshing by remember { mutableStateOf(false) }
@@ -124,7 +137,9 @@ fun HomeScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 8.dp),
-                        onSearchClick = onSearchClick
+                        onSearchClick = onSearchClick,
+                        onCartClick = onCartClick,
+                        cartItemCount = cartUiState.cartItems.size
                     )
                 }
                 

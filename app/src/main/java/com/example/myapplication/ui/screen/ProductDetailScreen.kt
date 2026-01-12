@@ -19,6 +19,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +53,7 @@ import com.example.myapplication.R
 import com.example.myapplication.data.model.Product
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
+import com.example.myapplication.ui.viewmodel.CartViewModel
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
 import java.text.NumberFormat
@@ -62,17 +66,25 @@ fun ProductDetailScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit = {},
     onBuyClick: ((Product) -> Unit)? = null,
+    onCartClick: () -> Unit = {},
     viewModel: ProductViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
+    ),
+    cartViewModel: CartViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val cartUiState by cartViewModel.uiState.collectAsState()
     val product = uiState.productDetail
     var isFavorite by remember { mutableStateOf(false) }
+    var previousAddingState by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     
     LaunchedEffect(productId) {
         viewModel.loadProductById(productId)
+        cartViewModel.loadCart()
     }
     
     // Handle token expired
@@ -80,6 +92,36 @@ fun ProductDetailScreen(
         if (uiState.isTokenExpired) {
             onLogout()
         }
+    }
+    
+    // Handle cart token expired
+    LaunchedEffect(cartUiState.isTokenExpired) {
+        if (cartUiState.isTokenExpired) {
+            onLogout()
+        }
+    }
+    
+    // Show snackbar for cart operations
+    LaunchedEffect(cartUiState.errorMessage) {
+        cartUiState.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Short
+            )
+            cartViewModel.clearError()
+        }
+    }
+    
+    // Show success message when item is added
+    LaunchedEffect(cartUiState.isAdding) {
+        // If was adding and now not adding (and no error), show success
+        if (previousAddingState && !cartUiState.isAdding && cartUiState.errorMessage == null) {
+            snackbarHostState.showSnackbar(
+                message = "Produk berhasil ditambahkan ke keranjang",
+                duration = SnackbarDuration.Short
+            )
+        }
+        previousAddingState = cartUiState.isAdding
     }
     
     Scaffold(
@@ -118,29 +160,32 @@ fun ProductDetailScreen(
                         )
                     }
                     Box {
-                        IconButton(onClick = { /* Navigate to cart */ }) {
+                        IconButton(onClick = onCartClick) {
                             Icon(
                                 imageVector = Icons.Outlined.ShoppingCart,
                                 contentDescription = "Cart",
                                 tint = Black
                             )
                         }
-                        // Cart badge
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 8.dp, y = (-4).dp)
-                                .size(18.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(Color(0xFFDC2626)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "1",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = White
-                            )
+                        // Cart badge - show count if > 0
+                        val cartItemCount = cartUiState.cartItems.size
+                        if (cartItemCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 8.dp, y = (-4).dp)
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(0xFFDC2626)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (cartItemCount > 9) "9+" else cartItemCount.toString(),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = White
+                                )
+                            }
                         }
                     }
                     IconButton(onClick = { /* Menu */ }) {
@@ -158,12 +203,23 @@ fun ProductDetailScreen(
             ProductDetailBottomBar(
                 onChatClick = { /* Open chat */ },
                 onBuyDirectClick = {
-                    product?.let { onBuyClick?.invoke(it) }
+                    product?.let { 
+                        onBuyClick?.invoke(it)
+                    }
                 },
-                onAddToCartClick = { /* Add to cart */ }
+                onAddToCartClick = {
+                    product?.let {
+                        cartViewModel.addItemToCart(it.id, quantity = 1)
+                    }
+                },
+                isAddingToCart = cartUiState.isAdding,
+                isProductAvailable = product != null && product.stock > 0
             )
         },
-        containerColor = White
+        containerColor = White,
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        }
     ) { paddingValues ->
         if (uiState.isLoadingDetail && product == null) {
             // Loading State
@@ -810,7 +866,9 @@ fun ProductDetailNavBar(
 fun ProductDetailBottomBar(
     onChatClick: () -> Unit,
     onBuyDirectClick: () -> Unit,
-    onAddToCartClick: () -> Unit
+    onAddToCartClick: () -> Unit,
+    isAddingToCart: Boolean = false,
+    isProductAvailable: Boolean = true
 ) {
     Surface(
         color = White,
@@ -853,13 +911,18 @@ fun ProductDetailBottomBar(
                     .weight(1f)
                     .height(48.dp),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, Color(0xFF10B981)), // Green border
+                enabled = isProductAvailable,
+                border = BorderStroke(
+                    1.dp, 
+                    if (isProductAvailable) Color(0xFF10B981) else Color(0xFFD1D5DB)
+                ),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF10B981) // Green text
+                    contentColor = Color(0xFF10B981), // Green text
+                    disabledContentColor = Color(0xFF9CA3AF) // Grey when disabled
                 )
             ) {
                 Text(
-                    text = "Beli Langsung",
+                    text = if (isProductAvailable) "Beli Langsung" else "Stok Habis",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -875,13 +938,22 @@ fun ProductDetailBottomBar(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF10B981), // Green background
                     contentColor = White // White text
-                )
+                ),
+                enabled = !isAddingToCart
             ) {
-                Text(
-                    text = "+ Keranjang",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                if (isAddingToCart) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "+ Keranjang",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

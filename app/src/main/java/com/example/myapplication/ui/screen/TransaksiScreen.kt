@@ -119,7 +119,10 @@ fun TransaksiScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.orders) { order ->
+                        items(
+                            items = uiState.orders,
+                            key = { it.id }
+                        ) { order ->
                             OrderTransactionCard(
                                 order = order,
                                 onClick = { onOrderClick(order.id) },
@@ -220,7 +223,8 @@ private fun OrderTransactionCard(
     onBuyAgainClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val firstItem = order.orderItems.firstOrNull()
+    val orderItems = order.orderItems ?: emptyList()
+    val firstItem = orderItems.firstOrNull()
     val isPending = order.status.lowercase() == "pending"
     val paymentId = order.payment?.id
     
@@ -300,9 +304,11 @@ private fun OrderTransactionCard(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFFF3F4F6))
                     ) {
+                        val imageUrl = firstItem.product?.thumbnail?.let { ApiClient.getImageUrl(it) }
+                            ?: firstItem.product?.images?.firstOrNull()?.imageUrl?.let { ApiClient.getImageUrl(it) }
                         AsyncImage(
                             model = ImageRequest.Builder(context)
-                                .data(ApiClient.getImageUrl(firstItem.product?.thumbnail ?: firstItem.product?.images?.firstOrNull()?.imageUrl))
+                                .data(imageUrl ?: "")
                                 .crossfade(true)
                                 .build(),
                             contentDescription = firstItem.productName,
@@ -459,11 +465,14 @@ private fun formatDiscountPrice(price: Int): String {
 
 private fun formatTransactionDate(dateString: String): String {
     return try {
+        if (dateString.isBlank()) return ""
+        val cleanDateString = dateString.substringBefore(".").substringBefore("Z")
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
-        val date = inputFormat.parse(dateString.substringBefore("."))
+        val date = inputFormat.parse(cleanDateString)
         outputFormat.format(date ?: Date())
     } catch (e: Exception) {
+        // Return original string if parsing fails
         dateString
     }
 }

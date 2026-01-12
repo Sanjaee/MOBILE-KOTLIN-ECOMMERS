@@ -284,6 +284,24 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(isPolling = false)
     }
     
+    fun loadOrder(orderId: String) {
+        viewModelScope.launch {
+            val token = preferencesManager.accessToken.first()
+            if (token == null) {
+                return@launch
+            }
+            
+            orderRepository.getOrder(orderId, token).fold(
+                onSuccess = { order ->
+                    _uiState.value = _uiState.value.copy(order = order)
+                },
+                onFailure = {
+                    // Silently fail - order might not be needed
+                }
+            )
+        }
+    }
+    
     private fun calculateCountdown(expiryTime: String?): Long {
         if (expiryTime == null) return 0
         

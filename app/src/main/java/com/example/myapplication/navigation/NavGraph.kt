@@ -82,6 +82,8 @@ sealed class Screen(val route: String) {
     object SearchResult : Screen("search_result/{keyword}") {
         fun createRoute(keyword: String) = "search_result/${android.net.Uri.encode(keyword)}"
     }
+    
+    object Cart : Screen("cart")
 }
 
 // Slide animation helper - Gojek style
@@ -362,6 +364,9 @@ fun NavGraph(
                     },
                     onSearchClick = {
                         navController.navigate(Screen.Search.route)
+                    },
+                    onCartClick = {
+                        navController.navigate(Screen.Cart.route)
                     }
                 )
             }
@@ -550,6 +555,9 @@ fun NavGraph(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onCartClick = {
+                    navController.navigate(Screen.Cart.route)
                 },
                 onBuyClick = { product ->
                     navController.navigate(Screen.Checkout.createRoute(product.id, 1))
@@ -791,6 +799,33 @@ fun NavGraph(
                 },
                 onProductClick = { productId ->
                     navController.navigate(Screen.ProductDetail.createRoute(productId))
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.Cart.route,
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) {
+            CartScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onCheckout = { selectedItems ->
+                    // Navigate to checkout with the first selected item
+                    // TODO: In the future, we can create a multi-item checkout screen
+                    if (selectedItems.isNotEmpty()) {
+                        val firstItem = selectedItems.first()
+                        navController.navigate(
+                            Screen.Checkout.createRoute(
+                                productId = firstItem.productId,
+                                quantity = firstItem.quantity
+                            )
+                        )
+                    }
                 }
             )
         }

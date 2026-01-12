@@ -56,5 +56,6 @@ object ApiClient {
     val paymentApiService: PaymentApiService = retrofit.create(PaymentApiService::class.java)
     val orderApiService: OrderApiService = retrofit.create(OrderApiService::class.java)
     val sellerApiService: SellerApiService = retrofit.create(SellerApiService::class.java)
+    val cartApiService: CartApiService = retrofit.create(CartApiService::class.java)
 }
 

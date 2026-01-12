@@ -35,6 +35,7 @@ import com.example.myapplication.ui.components.product.ProductCard
 import com.example.myapplication.ui.components.product.ProductListSection
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
+import com.example.myapplication.ui.viewmodel.CartViewModel
 import com.example.myapplication.ui.viewmodel.PaymentViewModel
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
@@ -56,6 +57,9 @@ fun PaymentStatusScreen(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     ),
     productViewModel: ProductViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
+    ),
+    cartViewModel: CartViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as Application)
     )
 ) {
@@ -80,11 +84,46 @@ fun PaymentStatusScreen(
     
     // Navigate to OrderDetailScreen when payment is successful
     var hasNavigated by remember { mutableStateOf(false) }
+    var hasRemovedCartItems by remember { mutableStateOf(false) }
+    
+    // Load order if payment is successful but order data is missing
+    LaunchedEffect(uiState.payment?.status, uiState.payment?.orderUuid) {
+        val paymentStatus = uiState.payment?.status
+        val orderUuid = uiState.payment?.orderUuid
+        
+        if (paymentStatus == com.example.myapplication.data.model.PaymentStatus.SUCCESS) {
+            // If order is not in payment object, try to load it
+            if (uiState.payment?.order == null && !orderUuid.isNullOrEmpty() && uiState.order == null) {
+                paymentViewModel.loadOrder(orderUuid)
+            }
+        }
+    }
+    
+    // Remove cart items when payment is successful
+    LaunchedEffect(uiState.payment?.status, uiState.payment?.order, uiState.order) {
+        val paymentStatus = uiState.payment?.status
+        if (paymentStatus == com.example.myapplication.data.model.PaymentStatus.SUCCESS && !hasRemovedCartItems) {
+            val order = uiState.payment?.order ?: uiState.order
+            val productIds = order?.orderItems?.map { it.productId } ?: emptyList()
+            
+            if (productIds.isNotEmpty()) {
+                // Remove items from cart that match the ordered products
+                cartViewModel.removeItemsByProductIds(productIds)
+                hasRemovedCartItems = true
+            } else {
+                // Fallback: reload cart which will sync with backend
+                // Backend should automatically remove items that were ordered
+                cartViewModel.loadCart()
+                hasRemovedCartItems = true
+            }
+        }
+    }
     
     LaunchedEffect(uiState.payment?.status) {
         val paymentStatus = uiState.payment?.status
         if (paymentStatus == com.example.myapplication.data.model.PaymentStatus.SUCCESS && !hasNavigated) {
             paymentViewModel.stopPolling()
+            
             // Navigate to order detail immediately when payment is successful
             // Use order_uuid from payment (this is the order ID in UUID format)
             val orderId = uiState.payment?.orderUuid
@@ -108,6 +147,7 @@ fun PaymentStatusScreen(
     // Reset navigation flag when payment changes
     LaunchedEffect(uiState.payment?.id) {
         hasNavigated = false
+        hasRemovedCartItems = false
     }
     
     // Stop polling when screen is disposed (user leaves the screen)
