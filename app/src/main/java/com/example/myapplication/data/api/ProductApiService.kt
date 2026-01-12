@@ -40,6 +40,13 @@ interface ProductApiService {
         @Body request: CreateProductRequest
     ): Response<ApiResponse<Product>>
     
+    @PUT("api/v1/products/{id}")
+    suspend fun updateProduct(
+        @Header("Authorization") token: String,
+        @Path("id") productId: String,
+        @Body request: UpdateProductRequest
+    ): Response<ApiResponse<Product>>
+    
     @Multipart
     @POST("api/v1/products/{id}/images/upload")
     suspend fun uploadProductImages(

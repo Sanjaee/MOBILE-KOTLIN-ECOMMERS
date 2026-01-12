@@ -209,6 +209,35 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         )
     }
     
+    fun updateProduct(productId: String, request: UpdateProductRequest) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                isCreateSuccess = false
+            )
+            
+            repository.updateProduct(productId, request).fold(
+                onSuccess = { product ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isCreateSuccess = true,
+                        createdProductId = product.id,
+                        productDetail = product
+                    )
+                },
+                onFailure = { exception ->
+                    val isTokenExpired = exception is TokenExpiredException
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Failed to update product",
+                        isTokenExpired = isTokenExpired
+                    )
+                }
+            )
+        }
+    }
+    
     fun loadCategories(activeOnly: Boolean? = null) {
         viewModelScope.launch {
             repository.getCategories(activeOnly = activeOnly).fold(

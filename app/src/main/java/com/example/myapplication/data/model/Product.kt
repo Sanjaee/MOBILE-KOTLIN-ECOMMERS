@@ -141,6 +141,38 @@ data class CreateProductRequest(
     val isFeatured: Boolean? = null
 )
 
+data class UpdateProductRequest(
+    @SerializedName("category_id")
+    val categoryId: String? = null,
+    
+    @SerializedName("name")
+    val name: String? = null,
+    
+    @SerializedName("description")
+    val description: String? = null,
+    
+    @SerializedName("sku")
+    val sku: String? = null,
+    
+    @SerializedName("price")
+    val price: Int? = null,
+    
+    @SerializedName("stock")
+    val stock: Int? = null,
+    
+    @SerializedName("weight")
+    val weight: Int? = null,
+    
+    @SerializedName("thumbnail")
+    val thumbnail: String? = null,
+    
+    @SerializedName("is_active")
+    val isActive: Boolean? = null,
+    
+    @SerializedName("is_featured")
+    val isFeatured: Boolean? = null
+)
+
 data class UploadImagesResponse(
     @SerializedName("images")
     val images: List<String>,

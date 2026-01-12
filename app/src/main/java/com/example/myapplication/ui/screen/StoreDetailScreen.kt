@@ -13,10 +13,17 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,8 +39,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.myapplication.data.api.ApiClient
 import com.example.myapplication.R
+import com.example.myapplication.ui.components.product.ProductCard
 import com.example.myapplication.ui.theme.Black
 import com.example.myapplication.ui.theme.White
+import com.example.myapplication.ui.viewmodel.ProductViewModel
 import com.example.myapplication.ui.viewmodel.SellerViewModel
 import com.example.myapplication.ui.viewmodel.ViewModelFactory
 import java.text.DecimalFormat
@@ -44,19 +53,35 @@ fun StoreDetailScreen(
     sellerId: String? = null, // If null, load current user's store
     onBack: () -> Unit,
     onAddProductClick: () -> Unit = {},
-    viewModel: SellerViewModel = viewModel(
+    onProductClick: (String) -> Unit = {},
+    onEditProductClick: (String) -> Unit = {},
+    sellerViewModel: SellerViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application)
+    ),
+    productViewModel: ProductViewModel = viewModel(
         factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application)
     )
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val seller = uiState.seller
+    val sellerUiState by sellerViewModel.uiState.collectAsState()
+    val productUiState by productViewModel.uiState.collectAsState()
+    val seller = sellerUiState.seller
     val context = LocalContext.current
+    
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Home", "Product", "Order")
     
     LaunchedEffect(sellerId) {
         if (sellerId != null) {
-            viewModel.getSeller(sellerId)
+            sellerViewModel.getSeller(sellerId)
         } else {
-            viewModel.getMySeller()
+            sellerViewModel.getMySeller()
+        }
+    }
+    
+    // Load products when Product tab is selected
+    LaunchedEffect(selectedTabIndex, seller?.id) {
+        if (selectedTabIndex == 1 && seller?.id != null) {
+            productViewModel.loadProducts(page = 1, limit = 20, activeOnly = true)
         }
     }
     
@@ -85,7 +110,7 @@ fun StoreDetailScreen(
         },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
-        if (uiState.isLoading && seller == null) {
+        if (sellerUiState.isLoading && seller == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -99,9 +124,8 @@ fun StoreDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
             ) {
-                // Store Banner
+                // Store Banner (always visible)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -133,21 +157,148 @@ fun StoreDetailScreen(
                     }
                 }
                 
-                // Store Info Card
+                // Tab Row
+                Column {
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        containerColor = White,
+                        contentColor = Black,
+                        indicator = {}
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = {
+                                    Text(
+                                        text = title,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selectedContentColor = Color(0xFF10B981),
+                                unselectedContentColor = Color(0xFF6B7280)
+                            )
+                        }
+                    }
+                    // Custom green indicator
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            tabs.forEachIndexed { index, _ ->
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(3.dp)
+                                        .background(
+                                            if (selectedTabIndex == index) Color(0xFF10B981) else Color.Transparent
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Tab Content
+                when (selectedTabIndex) {
+                    0 -> HomeTabContent(seller = seller, sellerId = sellerId, onAddProductClick = onAddProductClick)
+                    1 -> ProductTabContent(
+                        products = productUiState.products,
+                        isLoading = productUiState.isLoading,
+                        onProductClick = if (sellerId == null) onEditProductClick else onProductClick
+                    )
+                    2 -> OrderTabContent(sellerId = seller.id)
+                }
+            }
+        } else {
+            val errorMessage = sellerUiState.errorMessage
+            if (errorMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            fontSize = 16.sp,
+                            color = Color(0xFFEF4444)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeTabContent(
+    seller: com.example.myapplication.data.model.Seller,
+    sellerId: String?,
+    onAddProductClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Add Product Button (only show for store owner) - At the top
+        if (sellerId == null) {
+            item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .clickable(onClick = onAddProductClick),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = "Add Product",
+                            modifier = Modifier.size(24.dp),
+                            tint = White
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Tambah Produk",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    }
+                }
+            }
+        }
+        
+        item {
+            // Store Info Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                         // Store Logo and Name
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -254,7 +405,7 @@ fun StoreDetailScreen(
                             }
                         }
                         
-                        Divider(color = Color(0xFFE5E7EB))
+                        HorizontalDivider(color = Color(0xFFE5E7EB))
                         
                         // Store Stats
                         Row(
@@ -277,7 +428,7 @@ fun StoreDetailScreen(
                         
                         // Store Description
                         if (!seller.shopDescription.isNullOrBlank()) {
-                            Divider(color = Color(0xFFE5E7EB))
+                            HorizontalDivider(color = Color(0xFFE5E7EB))
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -298,7 +449,7 @@ fun StoreDetailScreen(
                         
                         // Store Contact Info
                         if (!seller.shopPhone.isNullOrBlank() || !seller.shopEmail.isNullOrBlank()) {
-                            Divider(color = Color(0xFFE5E7EB))
+                            HorizontalDivider(color = Color(0xFFE5E7EB))
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
@@ -351,7 +502,7 @@ fun StoreDetailScreen(
                         
                         // Store Address
                         if (!seller.shopAddress.isNullOrBlank() || !seller.shopCity.isNullOrBlank() || !seller.shopProvince.isNullOrBlank()) {
-                            Divider(color = Color(0xFFE5E7EB))
+                            HorizontalDivider(color = Color(0xFFE5E7EB))
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -398,7 +549,7 @@ fun StoreDetailScreen(
                         }
                         
                         // Store Status
-                        Divider(color = Color(0xFFE5E7EB))
+                        HorizontalDivider(color = Color(0xFFE5E7EB))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -457,65 +608,84 @@ fun StoreDetailScreen(
                         }
                     }
                 }
-                
-                // Add Product Button (only show for store owner)
-                if (sellerId == null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .clickable(onClick = onAddProductClick),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Add,
-                                contentDescription = "Add Product",
-                                modifier = Modifier.size(24.dp),
-                                tint = White
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Tambah Produk",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = White
-                            )
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
             }
-        } else {
-            val errorMessage = uiState.errorMessage
-            if (errorMessage != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = errorMessage,
-                            fontSize = 16.sp,
-                            color = Color(0xFFEF4444)
-                        )
-                    }
-                }
+        }
+    }
+
+@Composable
+private fun ProductTabContent(
+    products: List<com.example.myapplication.data.model.Product>,
+    isLoading: Boolean,
+    onProductClick: (String) -> Unit
+) {
+    if (isLoading && products.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color(0xFF10B981))
+        }
+    } else if (products.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Inventory2,
+                    contentDescription = "No Products",
+                    modifier = Modifier.size(64.dp),
+                    tint = Color(0xFF9CA3AF)
+                )
+                Text(
+                    text = "Tidak ada produk",
+                    fontSize = 16.sp,
+                    color = Color(0xFF6B7280)
+                )
             }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(products) { product ->
+                ProductCard(
+                    product = product,
+                    onClick = { onProductClick(product.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderTabContent(sellerId: String?) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ReceiptLong,
+                contentDescription = "No Orders",
+                modifier = Modifier.size(64.dp),
+                tint = Color(0xFF9CA3AF)
+            )
+            Text(
+                text = "Fitur Order akan segera hadir",
+                fontSize = 16.sp,
+                color = Color(0xFF6B7280)
+            )
         }
     }
 }

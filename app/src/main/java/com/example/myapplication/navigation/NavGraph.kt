@@ -73,6 +73,10 @@ sealed class Screen(val route: String) {
     
     object CreateProduct : Screen("create_product")
     
+    object EditProduct : Screen("edit_product/{productId}") {
+        fun createRoute(productId: String) = "edit_product/$productId"
+    }
+    
     object Search : Screen("search")
     
     object SearchResult : Screen("search_result/{keyword}") {
@@ -677,6 +681,12 @@ fun NavGraph(
                 onBack = {
                     navController.popBackStack()
                 },
+                onProductClick = { productId ->
+                    navController.navigate(Screen.ProductDetail.createRoute(productId))
+                },
+                onEditProductClick = { productId ->
+                    navController.navigate(Screen.EditProduct.createRoute(productId))
+                },
                 onAddProductClick = {
                     navController.navigate(Screen.CreateProduct.route)
                 }
@@ -694,6 +704,9 @@ fun NavGraph(
                 sellerId = null, // Load current user's store
                 onBack = {
                     navController.popBackStack()
+                },
+                onEditProductClick = { productId ->
+                    navController.navigate(Screen.EditProduct.createRoute(productId))
                 },
                 onAddProductClick = {
                     navController.navigate(Screen.CreateProduct.route)
@@ -717,6 +730,27 @@ fun NavGraph(
                     navController.navigate(Screen.Main.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                }
+            )
+        }
+        
+        composable(
+            route = Screen.EditProduct.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType }),
+            enterTransition = { slideInFromRight() },
+            exitTransition = { slideOutToLeft() },
+            popEnterTransition = { slideInFromLeft() },
+            popExitTransition = { slideOutToRight() }
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            
+            EditProductScreen(
+                productId = productId,
+                onBack = {
+                    navController.popBackStack()
+                },
+                onProductUpdated = {
+                    navController.popBackStack()
                 }
             )
         }

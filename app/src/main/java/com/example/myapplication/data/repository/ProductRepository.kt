@@ -151,6 +151,45 @@ class ProductRepository(private val context: Context? = null) {
         }
     }
     
+    suspend fun updateProduct(productId: String, request: UpdateProductRequest): Result<Product> {
+        return try {
+            val token = preferencesManager?.accessToken?.first()
+                ?: return Result.failure(Exception("Anda belum login. Silakan login terlebih dahulu."))
+            
+            val response = apiService.updateProduct("Bearer $token", productId, request)
+            if (response.isSuccessful) {
+                val responseBody = response.body()
+                val isSuccess = responseBody?.success != false && responseBody?.data != null
+                if (isSuccess) {
+                    responseBody?.data?.let {
+                        Result.success(it)
+                    } ?: Result.failure(Exception("Gagal mengupdate produk: Data tidak valid"))
+                } else {
+                    val errorMessage = parseErrorMessage(response.errorBody()?.string())
+                    Result.failure(Exception(errorMessage ?: "Gagal mengupdate produk"))
+                }
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> "Session Anda telah kadaluarsa. Silakan login ulang."
+                    403 -> "Anda tidak memiliki izin untuk mengupdate produk ini."
+                    404 -> "Produk tidak ditemukan."
+                    409 -> parseErrorMessage(response.errorBody()?.string()) ?: "SKU sudah digunakan. Gunakan SKU yang berbeda."
+                    422 -> parseErrorMessage(response.errorBody()?.string()) ?: "Data yang dimasukkan tidak valid. Periksa kembali form."
+                    else -> parseErrorMessage(response.errorBody()?.string()) ?: "Gagal mengupdate produk. Kode error: ${response.code()}"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            val errorMessage = when {
+                e.message?.contains("Unable to resolve host") == true -> "Tidak dapat terhubung ke server. Periksa koneksi internet Anda."
+                e.message?.contains("timeout") == true -> "Koneksi timeout. Silakan coba lagi."
+                e.message?.contains("SocketTimeoutException") == true -> "Waktu koneksi habis. Silakan coba lagi."
+                else -> e.message ?: "Terjadi kesalahan: ${e.javaClass.simpleName}"
+            }
+            Result.failure(Exception(errorMessage))
+        }
+    }
+    
     suspend fun uploadProductImages(productId: String, imageUris: List<Uri>): Result<UploadImagesResponse> {
         return try {
             val token = preferencesManager?.accessToken?.first()
